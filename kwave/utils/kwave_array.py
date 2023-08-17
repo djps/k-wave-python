@@ -1,13 +1,14 @@
 import time
 from dataclasses import dataclass
+from math import ceil
 from typing import Optional
 
 import numpy as np
-from kwave.kgrid import kWaveGrid
 from numpy import arcsin, pi, cos, size, array
 from numpy.linalg import linalg
-from math import ceil
 
+import kwave
+from kwave.kgrid import kWaveGrid
 from kwave.utils.conversion import tol_star
 from kwave.utils.interp import get_delta_bli
 from kwave.utils.mapgen import trim_cart_points, make_cart_rect, make_cart_arc, make_cart_bowl, make_cart_disc, \
@@ -233,7 +234,8 @@ class kWaveArray(object):
                 "Input position for rectangular element must be specified as a 2 (2D) or 3 (3D) element array.")
 
         if coord_dim == 3:
-            assert isinstance(theta, (list, tuple)) and len(theta) == 3, "'theta' must be a list or tuple of length 3"
+            assert isinstance(theta, (kwave.data.Vector, list, tuple)) and len(
+                theta) == 3, "'theta' must be a list or tuple of length 3"
         else:
             assert isinstance(theta, (int, float)), "'theta' must be an integer or float"
 
@@ -414,7 +416,7 @@ class kWaveArray(object):
         # apply transformation
         vec = np.append(vec, [1])
         vec = np.matmul(self.array_transformation, vec)
-        return vec
+        return vec[:-1]
 
     def get_off_grid_points(self, kgrid, element_num, mask_only):
 
@@ -570,13 +572,13 @@ class kWaveArray(object):
             data_type = 'float64'
             sz_bytes = num_source_points * Nt * 8
 
-        sz_ind = 0
+        sz_ind = 1
         while sz_bytes > 1024:
             sz_bytes = sz_bytes / 1024
             sz_ind += 1
 
         prefixes = ['', 'K', 'M', 'G', 'T']
-        sz_bytes = round(sz_bytes, 2)
+        sz_bytes = np.round(sz_bytes, 2)  # TODO: should round to significant to map matlab functionality
         print(f'approximate size of source matrix: {str(sz_bytes)} {prefixes[sz_ind]} B ( {data_type} precision)')
 
         source_signal = source_signal.astype(data_type)
@@ -747,7 +749,7 @@ def off_grid_points(kgrid, points,
         # convert to the computational coordinate if the physical coordinate is
         # sampled nonuniformly
         if kgrid.nonuniform:
-            point, BLIscale = mapPoint(kgrid, point)
+            point, BLIscale = mapPoint(kgrid, point)  # noqa: F821
 
         if bli_tolerance == 0:
             if mask_only:

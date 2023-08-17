@@ -12,16 +12,16 @@ from tempfile import gettempdir
 
 import numpy as np
 
-from kwave.data import Vector
-from kwave.options import SimulationOptions, SimulationExecutionOptions
-
 # noinspection PyUnresolvedReferences
-import setup_test
+import setup_test  # noqa: F401
+from kwave.data import Vector
 from kwave.kgrid import kWaveGrid
 from kwave.kmedium import kWaveMedium
 from kwave.ksensor import kSensor
 from kwave.ksource import kSource
 from kwave.kspaceFirstOrder2D import kspaceFirstOrder2DC
+from kwave.options.simulation_execution_options import SimulationExecutionOptions
+from kwave.options.simulation_options import SimulationOptions
 from kwave.utils.filters import filter_time_series
 from tests.diff_utils import compare_against_ref
 
@@ -94,7 +94,7 @@ def test_tvsp_doppler_effect():
     sensor = kSensor(sensor_mask)
 
     # run the simulation
-    input_filename = f'example_doppler_input.h5'
+    input_filename = 'example_doppler_input.h5'
     pathname = gettempdir()
     input_file_full_path = os.path.join(pathname, input_filename)
     simulation_options = SimulationOptions(
@@ -112,5 +112,5 @@ def test_tvsp_doppler_effect():
         simulation_options=simulation_options,
         execution_options=SimulationExecutionOptions()
     )
-    assert compare_against_ref(f'out_tvsp_doppler_effect', input_file_full_path), \
+    assert compare_against_ref('out_tvsp_doppler_effect', input_file_full_path), \
         'Files do not match!'
