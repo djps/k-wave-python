@@ -21,4 +21,8 @@ src/
 *.whl
 *.png
 *.pyc
+*.vtk
 data/
+*.mat
+*.log
+*.svg

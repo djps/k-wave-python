@@ -12,16 +12,16 @@ from tempfile import gettempdir
 
 import numpy as np
 
-from kwave.data import Vector
-from kwave.options import SimulationOptions, SimulationExecutionOptions
-
 # noinspection PyUnresolvedReferences
-import setup_test
+import setup_test  #noqa: F401
+from kwave.data import Vector
 from kwave.kgrid import kWaveGrid
 from kwave.kmedium import kWaveMedium
 from kwave.ksensor import kSensor
 from kwave.ksource import kSource
 from kwave.kspaceFirstOrder2D import kspaceFirstOrder2DC
+from kwave.options.simulation_execution_options import SimulationExecutionOptions
+from kwave.options.simulation_options import SimulationOptions
 from kwave.utils.conversion import cart2grid
 from kwave.utils.filters import filter_time_series
 from kwave.utils.mapgen import make_cart_circle
@@ -73,7 +73,7 @@ def test_sd_directivity_modelling_2D():
     source.p = filter_time_series(kgrid, medium, source.p)
 
     # pre-allocate array for storing the output time series
-    single_element_data = np.zeros((Nt, points))
+    single_element_data = np.zeros((Nt, points))  # noqa: F841
 
 
     # run a simulation for each of these sources to see the effect that the

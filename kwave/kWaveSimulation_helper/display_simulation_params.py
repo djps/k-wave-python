@@ -1,6 +1,7 @@
 import numpy as np
 
-from kwave import kWaveGrid, kWaveMedium
+from kwave.kgrid import kWaveGrid
+from kwave.kmedium import kWaveMedium
 from kwave.utils.data import scale_SI
 
 
@@ -11,7 +12,7 @@ def display_simulation_params(kgrid: kWaveGrid, medium: kWaveMedium, elastic_cod
     k_size = kgrid.size
 
     # display time step information
-    print('  dt: ', f'{scale_SI(dt)[0]}s', f', t_end: {scale_SI(t_array_end)[0]}s', ', time steps:', Nt)
+    print('  dt: ', f'{scale_SI(dt)[0]}s, t_end: {scale_SI(t_array_end)[0]}s, time steps:', Nt)
 
     c_min, c_min_comp, c_min_shear = get_min_sound_speed(medium, elastic_code)
 
@@ -80,4 +81,7 @@ def print_max_supported_freq(kgrid, c_min):
         if k_max.x == k_max.z and k_max.x == k_max.y:
             print('  maximum supported frequency: ', f'{scale_SI(k_max_all * c_min / (2*np.pi))[0]}Hz')
         else:
-            print('  maximum supported frequency: ', f'{scale_SI(k_max.x * c_min / (2*np.pi))[0]}Hz by {scale_SI(k_max.y * c_min / (2*np.pi))[0]}Hz by {scale_SI(k_max.z * c_min / (2*np.pi))[0]}Hz')
+            print('  maximum supported frequency: ',
+                  f'{scale_SI(k_max.x * c_min / (2*np.pi))[0]}Hz by '
+                  f'{scale_SI(k_max.y * c_min / (2*np.pi))[0]}Hz by '
+                  f'{scale_SI(k_max.z * c_min / (2*np.pi))[0]}Hz')
