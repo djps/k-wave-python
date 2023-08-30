@@ -25,7 +25,7 @@ def matlab_assign(matrix: np.ndarray, indices: Union[int, np.ndarray],
 
 def matlab_find(arr: Union[List[int], np.ndarray], val: int = 0, mode: str = 'neq') -> np.ndarray:
     """
-    Finds the indices of elements in an array that satisfy a given condition.
+    Finds the _matlab_ indices of elements in an array that satisfy a given condition.
 
     Args:
         arr: The array to search. Can be a list or a NumPy array.

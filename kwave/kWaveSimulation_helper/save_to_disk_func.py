@@ -40,6 +40,7 @@ def save_to_disk_func(
         integer_variables.pml_z_size = 0
 
     grab_medium_props(integer_variables, float_variables, medium, flags.elastic_code)
+
     grab_source_props(integer_variables, float_variables, source,
                       values.u_source_pos_index, values.s_source_pos_index, values.p_source_pos_index,
                       values.transducer_input_signal, values.delay_mask)
@@ -358,8 +359,6 @@ def grab_sensor_props(integer_variables, kgrid_dim, sensor_mask_index, cuboid_co
     # SENSOR VARIABLES
     # =========================================================================
 
-    # print("integer_variables.sensor_mask_type: ", integer_variables.sensor_mask_type)
-    
     if integer_variables.sensor_mask_type == 0:
         # mask is defined as a list of grid indices
         integer_variables.sensor_mask_index = sensor_mask_index
@@ -379,7 +378,7 @@ def grab_sensor_props(integer_variables, kgrid_dim, sensor_mask_index, cuboid_co
         integer_variables.sensor_mask_corners = sensor_mask_corners
 
     else:
-        raise NotImplementedError('unknown option for sensor_mask_type')
+        raise NotImplementedError('unknown option for sensor_mask_type')  
 
 
 def grab_nonuniform_grid_props(float_variables, kgrid, is_nonuniform_grid):

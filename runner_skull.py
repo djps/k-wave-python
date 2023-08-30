@@ -1,10 +1,15 @@
 import numpy as np
+import numpy.typing as npt
 
 import os
 import logging
 import sys
+from typing import List
 import matplotlib.pyplot as plt
 from skimage import measure
+import meshio
+import pyvista
+from mpl_toolkits.mplot3d import Axes3D
 from PIL import Image
 
 import nibabel as nib
@@ -15,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 # create console and file handlers and set level to debug
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
-fh = logging.FileHandler(filename='runner.log')
+fh = logging.FileHandler(filename='runner_skull.log')
 fh.setLevel(logging.DEBUG)
 # create formatter
 formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s')
@@ -118,71 +123,76 @@ verbose: bool = True
 doPlotting: bool = True
 savePlotting: bool = True
 
-t1_filename = 'data/skull/sub-test01_t1w.nii'
+t1_filename: str = 'data/skull/sub-test01_t1w.nii'
 
-ct_filename = 'data/skull/sub-test01_pct.nii'
+ct_filename: str = 'data/skull/sub-test01_pct.nii'
 
-output_dir = 'data/skull/'
+output_dir: str = 'data/skull/'
 
-focus_coords_in = [99, 161, 202]
+# shift back by one for zero indexing
+focus_coords_in: List[int] = [int(98), int(160), int(201)]
 
-bowl_coords_in = [90, 193, 262]
+# shift back by one for zero indexing
+bowl_coords_in: List[int] = [int(89), int(192), int(261)]
 
-focus_depth = 60
+# Distance from transducer face to intended focus in mm, rounded to the nearest integer.
+focus_depth: int = int(60)
 
 
 # =========================================================================
 # DEFINE THE MEDIUM PARAMETERS
 # =========================================================================
 
-hu_min 	= 300   # minimum skull HU
-hu_max 	= 2000  # maximum skull HU
+
+# Cut-off values for CT data
+hu_min: float = 300.0   # minimum skull HU
+hu_max: float = 2000.0  # maximum skull HU, but changed
 
 # medium parameters
-c_min = 1500           # sound speed [m/s]
-c_max  = 3100          # max. speed of sound in skull (F. A. Duck, 2013.) [m/s]
-rho_min  = 1000        # density [kg/m^3]
-rho_max = 1900         # max. skull density [kg/m3]
-alpha_power = 1.43     # Robertson et al., PMB 2017 usually between 1 and 3? from Treeby paper
-alpha_coeff_water = 0  # [dB/(MHz^y cm)] close to 0 (Mueller et al., 2017), see also 0.05 Fomenko et al., 2020?
-alpha_coeff_min = 4    #
-alpha_coeff_max = 8.7  # [dB/(MHz cm)] Fry 1978 at 0.5MHz: 1 Np/cm (8.7 dB/cm) for both diploe and outer tables
+c_min: float = 1500           # sound speed [m/s]
+c_max: float = 3100           # max. speed of sound in skull (F. A. Duck, 2013.) [m/s]
+rho_min: float = 1000         # density [kg/m^3]
+rho_max: float = 1900         # max. skull density [kg/m3]
+alpha_power: float = 1.43     # Robertson et al., PMB 2017 usually between 1 and 3? from Treeby paper
+alpha_coeff_water: float = 0  # [dB/(MHz^y cm)] close to 0 (Mueller et al., 2017), see also 0.05 Fomenko et al., 2020?
+alpha_coeff_min: float = 4    #
+alpha_coeff_max: float = 8.7  # [dB/(MHz cm)] Fry 1978 at 0.5MHz: 1 Np/cm (8.7 dB/cm) for both diploe and outer tables
 
 # sound speed [m/s]
-c0 = 1500.0
+c0: float = 1500.0
 
 # density [kg/m^3]
-rho0 = 1000.0
+rho0: float = 1000.0
 
 # Robertson et al., PMB 2017
-alpha_power = 1.43
+alpha_power: float = 1.43
 
 # [dB/(MHz^y cm)] close to 0 (Mueller et al., 2017),
 # see also 0.05 Fomenko et al., 2020
-alpha_coeff = 0.0
+alpha_coeff: float = 0.0
 
 
 # =========================================================================
-# DEFINE THE TRANSDUCER SETUP 
+# DEFINE THE TRANSDUCER SETUP
 # =========================================================================
 
-# single spherical transducer with four concentric elements, same pressure, 
+# single spherical transducer with four concentric elements, same pressure,
 # but different phases in order to get a coherent focus
 
 # name of transducer
-transducer = 'CTX500'
+transducer: str = 'CTX500'
 
 # pressure [Pa]
-pressure = 51590.0
+pressure: float = 51590.0
 
 # phase offsets [degrees]
-phase = np.array([0, 319, 278, 237])
+phase: npt.NDArray[np.float64] = np.array([0.0, 319.0, 278.0, 237.0])
 
 # bowl radius of curvature [m]
 source_roc = 63.2e-3
 
-# this has to be a list of lists with each list in the main list being the 
-# aperture diameters of the elements given an inner, outer pairs 
+# this has to be a list of lists with each list in the main list being the
+# aperture diameters of the elements given an inner, outer pairs
 diameters = [[0, 1.28],
              [1.3, 1.802],
              [1.82, 2.19],
@@ -199,50 +209,71 @@ freq = 500e3
 source_amp = np.squeeze(np.tile(pressure, [1, 4]))
 
 # phase [rad]
-source_phase = np.squeeze(np.array([np.deg2rad(phase),]))
+source_phase = np.squeeze(np.array([np.deg2rad(phase), ]))
 
 
 # =========================================================================
 # DEFINE COMPUTATIONAL PARAMETERS
 # =========================================================================
 
-ppw = 3                   # number of points per wavelength
-record_periods = 3        # number of periods to record
-cfl = 0.3                 # CFL number
-ppp = np.round(ppw / cfl) # compute points per period
+ppw_x = 3                   # number of points per wavelength along x-axis
+ppw_y = 3                   # number of points per wavelength along y-axis
+ppw_z = 3                   # number of points per wavelength along z-axis
+
+record_periods = 3          # number of periods to record
+
+cfl = 0.3                   # CFL number
+
+ppp_x = round(ppw_x / cfl)  # compute points per period along x-axis
+ppp_y = round(ppw_y / cfl)  # compute points per period along y-axis
+ppp_z = round(ppw_z / cfl)  # compute points per period along z-axis
 
 # Load CT image (nifti format)
 # voxel size = 1 x 1 x 1 mm3, matrix size: varies
 input_ct = nib.load(ct_filename).get_fdata()
+# get header information
+header_ct = nib.load(ct_filename).header
 
+# Load MR image (nifti format)
 input_t1 = nib.load(t1_filename).get_fdata()
+header_t1 = nib.load(t1_filename).header
 
-header = nib.load(ct_filename).header
+if verbose:
+    print(header_ct)
+    print(header_t1)
 
-print(header['pixdim'][1:4], input_ct.shape, input_t1.shape)
+# calculate the grid spacing based on PPW and frequency
+dx = c_min / (ppw_x * freq)  # in mm
+dy = c_min / (ppw_y * freq)
+dz = c_min / (ppw_z * freq)
 
-# calculate the grid spacing based on PPW and F0
-dx = c_min / (ppw * freq) # in mm
+print(dx)
 
 # resample input images to grid res (iso)
-scale_factor_x = round(header['pixdim'][1] / (dx * 1e3), 2)
-scale_factor_y = round(header['pixdim'][2] / (dx * 1e3), 2)
-scale_factor_z = round(header['pixdim'][3] / (dx * 1e3), 2)
+scale_factor_x = round(header_ct['pixdim'][1] / (dx * 1e3), 2)
+scale_factor_y = round(header_ct['pixdim'][2] / (dy * 1e3), 2)
+scale_factor_z = round(header_ct['pixdim'][3] / (dz * 1e3), 2)
 
 scale_factor = np.array([scale_factor_x, scale_factor_y, scale_factor_z])
 
-# ct_img = imresize3(input_ct, 'cubic', 'Scale', scale_factor);
+# from skimage.transform import resize
+# print(scale_factor, scale_factor_x, header_ct['pixdim'][1] / (dx * 1e3))
+# print(type(input_ct[0]), type(input_ct[0, 0, 0]))
 
-ct_img = np.array(Image.fromarray(input_ct).resize(208, 208))
+# ct_img = imresize3(input_ct, 'cubic', 'Scale', scale_factor);
+# ct_img = np.array(Image.fromarray(input_ct).resize(208, 208))
 
 # t1_img = imresize3(input_t1, 'cubic', 'Scale', scale_factor);
-t1_img = np.array(Image.fromarray(input_t1).resize(208, 208))
+# t1_img = np.array(Image.fromarray(input_t1).resize(208, 208))
 
-focus_coords = round(focus_coords_in * scale_factor)
-bowl_coords = round(bowl_coords_in * scale_factor)
+ct_img = np.array(input_ct, dtype=np.float32)
+t1_img = np.array(input_t1, dtype=np.int16)
+
+focus_coords = np.round(focus_coords_in * scale_factor).astype(int)
+bowl_coords = np.round(bowl_coords_in * scale_factor).astype(int)
 
 # update hu_max
-ct_max = np.max(ct_img.flattern())
+ct_max = np.max(ct_img.flatten())
 if (ct_max < hu_max):
     hu_max = ct_max
 
@@ -251,81 +282,98 @@ del ct_max
 # truncate CT HU (see Marsac et al., 2017)
 skull_model = ct_img
 skull_model[skull_model < hu_min] = 0  # only use HU for skull acoustic properties
-skull_model[skull_model > hu_max] = hu_max
+skull_model[skull_model > hu_max] = hu_max  # this does nothing
 
 # centre grid at midpoint between transducer and focus coordinates
-midpoint: int = int( round((bowl_coords + focus_coords) / 2.0) )
+midpoint = np.round((bowl_coords + focus_coords) // 2.0).astype(int)
 
-# pad images by 128 on each side
+# pad images by 128 grid points on each side
 padx: int = int(128)
+pady: int = int(128)
+padz: int = int(128)
 
-tmp_model = np.zeros((np.shape(skull_model)[0] + 2 * padx, 
-                      np.shape(skull_model)[1] + 2 * padx, 
-                      np.shape(skull_model)[2] + 2 * padx))
+padding = [padx, pady, padz]
 
-tmp_model[padx : np.shape(skull_model)[0] + padx, 
-          padx : np.shape(skull_model)[1] + padx, 
-          padx : np.shape(skull_model)[2] + padx] = skull_model
+# temporary padded container for model data which will be cropped
+tmp_model = np.zeros((np.shape(skull_model)[0] + 2 * padx,
+                      np.shape(skull_model)[1] + 2 * pady,
+                      np.shape(skull_model)[2] + 2 * padz), dtype=np.float32)
+# fill container with data
+tmp_model[padx:np.shape(skull_model)[0] + padx,
+          padx:np.shape(skull_model)[1] + pady,
+          padx:np.shape(skull_model)[2] + padz] = skull_model
 
-tmp_midpoint: int = midpoint + padx
+# shift the midpoint by padding value
+tmp_midpoint = np.asarray(midpoint + padding).astype(int)
 
-# centre on midpoint
+# get indices which define the centre by the midpoint
 # grid size = 256x256x256, new midpoint coords = [128,128,128]
-shift_idx = [[tmp_midpoint[0] - padx, tmp_midpoint[0] + padx], 
-             [tmp_midpoint[1] - padx, tmp_midpoint[1] + padx], 
-             [tmp_midpoint[2] - padx, tmp_midpoint[2] + padx]]
+shift_idx = np.asarray([[tmp_midpoint[0] - padx, tmp_midpoint[0] + padx],
+                        [tmp_midpoint[1] - pady, tmp_midpoint[1] + pady],
+                        [tmp_midpoint[2] - padz, tmp_midpoint[2] + padz]], dtype=int)
 
-model = tmp_model[shift_idx[0,0]:shift_idx[0,1], 
-                  shift_idx[1,0]:shift_idx[1,1], 
-                  shift_idx[2,0]:shift_idx[2,1]]
+# create model by cropped data
+model = tmp_model[shift_idx[0, 0]:shift_idx[0, 1],
+                  shift_idx[1, 0]:shift_idx[1, 1],
+                  shift_idx[2, 0]:shift_idx[2, 1]]
 
 shift_x: int = padx - midpoint[0]
-shift_y: int = padx - midpoint[1]
-shift_z: int = padx - midpoint[2]
+shift_y: int = pady - midpoint[1]
+shift_z: int = padz - midpoint[2]
 
-bowl_coords = bowl_coords + [shift_x, shift_y, shift_z]    # centre of rear surface of transducer [grid points]
-focus_coords = focus_coords + [shift_x, shift_y, shift_z]  # point on the beam axis of the transducer [grid points]
+shift = [shift_x, shift_y, shift_z]
+
+bowl_coords = bowl_coords + shift    # centre of rear surface of transducer [grid points]
+focus_coords = focus_coords + shift  # point on the beam axis of the transducer [grid points]
 
 # move t1 image
-new_t1 = np.zeros(np.shape(model))
-idx1 = np.zeros((3,2), dtype=int)
+new_t1 = np.zeros(np.shape(model), dtype=np.int16)
+# new indices: [[x0, x1], [y0, y1], [z0, z1]]
+idx1 = np.zeros((3, 2), dtype=int)
 
 for ii in np.arange(3, dtype=int):
-    h0: int = shift_idx[ii, 0] - padx
+    # index on lower bounds
+    h0: int = shift_idx[ii, 0] - padding[ii]
     if (h0 <= 0):
-        idx1[ii, 0] = 1
+        idx1[ii, 0] = 0  # must be changed to 0 indexing
     elif (h0 > 0):
         idx1[ii, 0] = h0
-    h1: int = shift_idx[ii, 1] - padx
-    if (h1 <= np.shape(ct_img)[ii] ):
+    # index on upper bounds
+    h1: int = shift_idx[ii, 1] - padding[ii]
+    if (h1 <= np.shape(ct_img)[ii]):
         idx1[ii, 1] = h1
     elif (h1 > np.shape(ct_img)[ii]):
         idx1[ii, 1] = np.shape(ct_img)[ii]
 
-idx2: int = np.zeros((3,2), dtype=int)
-idx2[:,0] = [shift_x, shift_y, shift_z] + [1,1,1]
-idx2[:,1] = np.shape(ct_img) + [shift_x, shift_y, shift_z]
+idx2 = np.zeros((3, 2), dtype=int)
+
+idx2[:, 0] = np.asarray(shift)
+
+idx2[:, 1] = np.asarray(np.shape(ct_img)) + np.asarray(shift)
+
 for ii in np.arange(0, 3, dtype=int):
+    # index on lower bounds
     if (idx2[ii, 0] <= 0):
-        idx2[ii, 0] = 1
+        idx2[ii, 0] = 0  # must be changed to 0 indexing
+    # index on upper bounds
     if (idx2[ii, 1] > np.shape(model)[ii]):
         idx2[ii, 1] = np.shape(model)[ii]
 
-
-new_t1[idx2[0,0]:idx2[0,1], 
-       idx2[1,0]:idx2[1,1], 
-       idx2[2,0]:idx2[2,1]] = t1_img[idx1[0,0]:idx1[0,1], 
-                                     idx1[1,0]:idx1[1,1], 
-                                     idx1[2,0]:idx1[2,1]]
+new_t1[idx2[0, 0]:idx2[0, 1],
+       idx2[1, 0]:idx2[1, 1],
+       idx2[2, 0]:idx2[2, 1]] = t1_img[idx1[0, 0]:idx1[0, 1],
+                                       idx1[1, 0]:idx1[1, 1],
+                                       idx1[2, 0]:idx1[2, 1]]
 t1_img = new_t1
 
 del new_t1
 del tmp_model
 
-
 # assign medium properties for skull
 # derived from CT HU based on Marsac et al., 2017 & Bancel et al., 2021
-density = rho_min + (rho_max - rho_min) * (model - 0) / (hu_max - 0)
+model_offset = 0.0
+hu_offset = 0.0
+density = rho_min + (rho_max - rho_min) * (model - model_offset) / (hu_max - hu_offset)
 
 sound_speed = c_min + (c_max - c_min) * (density - rho_min) / (rho_max - rho_min)
 
@@ -336,6 +384,7 @@ density[model == 0] = rho_min
 sound_speed[model == 0] = c_min
 alpha_coeff[model == 0] = alpha_coeff_water
 
+# Now create the medium object
 medium = kWaveMedium(
     sound_speed=sound_speed,
     density=density,
@@ -347,25 +396,25 @@ medium = kWaveMedium(
 # =========================================================================
 # DEFINE THE KGRID
 # =========================================================================
+# The grid is based on the size of the skull model.
 
 # compute the size of the grid
 Nx, Ny, Nz = np.shape(model)
-dy = dx
-dz = dx
 
 grid_size_points = Vector([Nx, Ny, Nz])
 grid_spacing_meters = Vector([dx, dy, dz])
 
 # create the k-space grid
 kgrid = kWaveGrid(grid_size_points, grid_spacing_meters)
-
+if verbose:
+    logger.info("done kWaveGrid")
 
 # =========================================================================
 # DEFINE THE TIME VECTOR
 # =========================================================================
 
 # compute corresponding time stepping
-dt = 1.0 / (ppp * freq)
+dt = 1.0 / (ppp_x * freq)
 
 # dt_stability_limit = checkStability(kgrid, medium);
 # if dt_stability_limit ~= Inf
@@ -380,64 +429,84 @@ Nt = round(t_end / dt)
 kgrid.setTime(Nt, dt)
 
 # calculate the actual CFL after adjusting for dt
-cfl = c_min * dt / dx
+cfl = c_min * dt / np.max(np.asarray([dx, dy, dz]))
+
+ppw = np.max(np.asarray([ppp_x, ppp_y, ppp_z]))
 
 ppp = round(ppw / cfl)
-print('PPW = ' + str(ppw))
-print('CFL = ' + str(cfl))
-print('PPP = ' + str(ppp))
+
+# print details
+if verbose:
+    print('PPW = ' + str(ppw))
+    print('CFL = ' + str(cfl))
+    print('PPP = ' + str(ppp))
 
 # =========================================================================
 # DEFINE THE SOURCE PARAMETERS
 # =========================================================================
 
 # set bowl position and orientation
-bowl_pos = [kgrid.x_vec(bowl_coords[0]), 
-            kgrid.y_vec(bowl_coords[1]),
-            kgrid.z_vec(bowl_coords[2])]
+bowl_coords = np.asarray(bowl_coords).astype(int)
+bowl_pos = [float(kgrid.x_vec[bowl_coords[0]]),
+            float(kgrid.y_vec[bowl_coords[1]]),
+            float(kgrid.z_vec[bowl_coords[2]])]
 
-focus_pos = [kgrid.x_vec(focus_coords[0]), 
-             kgrid.y_vec(focus_coords[1]), 
-             kgrid.z_vec(focus_coords[2])]
+focus_coords = np.asarray(focus_coords).astype(int)
+focus_pos = [float(kgrid.x_vec[focus_coords[0]]),
+             float(kgrid.y_vec[focus_coords[1]]),
+             float(kgrid.z_vec[focus_coords[2]])]
 
-# create empty kWaveArray this specfies the transducer properties
+# create empty kWaveArray instance which will specify the transducer properties
 karray = kWaveArray(bli_tolerance=0.01,
                     upsampling_rate=16,
                     single_precision=True)
+if verbose:
+    logger.info("done kWaveArray")
 
 # add bowl shaped element
 karray.add_annular_array(bowl_pos, source_roc, diameters, focus_pos)
+if verbose:
+    logger.info("done add_annular_array")
 
 # create time varying source
-source_sig = create_cw_signals(np.squeeze(kgrid.t_array), 
-                               freq, 
+source_sig = create_cw_signals(np.squeeze(kgrid.t_array),
+                               freq,
                                source_amp,
                                source_phase)
+if verbose:
+    logger.info("done create_cw_signals")
 
-# make a source object. 
+# make a source object
 source = kSource()
+if verbose:
+    logger.info("done kSource")
 
-# assign binary mask using the karray 
+# assign binary mask using the karray
 source.p_mask = karray.get_array_binary_mask(kgrid)
+if verbose:
+    logger.info("done get_array_binary_mask")
 
 # assign source pressure output in time
 source.p = karray.get_distributed_source_signal(kgrid, source_sig)
-
+if verbose:
+    logger.info("done get_distributed_source_signal")
 
 # =========================================================================
 # DEFINE THE SENSOR PARAMETERS
 # =========================================================================
 
 sensor = kSensor()
+if verbose:
+    logger.info("done kSensor")
 
-# set sensor mask: the mask says at which points data should be recorded 
+# set sensor mask: the mask says at which points data should be recorded
 sensor.mask = np.ones((Nx, Ny, Nz), dtype=bool)
 
 # set the record type: record the pressure waveform
 sensor.record = ['p']
 
 # record the final few periods when the field is in steady state
-sensor.record_start_index = kgrid.Nt - record_periods * ppp + 1
+sensor.record_start_index = kgrid.Nt - record_periods * ppp
 
 # =========================================================================
 # DEFINE THE SIMULATION PARAMETERS
@@ -448,7 +517,7 @@ output_filename = 'brics_skull_output.h5'
 
 DATA_CAST = 'single'
 DATA_PATH = 'data/skull/'
-BINARY_PATH ='./kwave/bin/windows/'
+BINARY_PATH = './kwave/bin/windows/'
 
 # set input options
 if verbose:
@@ -497,7 +566,7 @@ sensor_data = kspaceFirstOrder3DG(
 # sampling frequency
 fs = 1.0 / kgrid.dt
 
-# get Fourier coefficients 
+# get Fourier coefficients
 amp, phi, f = extract_amp_phase(sensor_data, fs, freq, dim=1,
                                 fft_padding=1, window='Rectangular')
 
@@ -505,7 +574,7 @@ amp, phi, f = extract_amp_phase(sensor_data, fs, freq, dim=1,
 p = np.reshape(amp, (Nx, Ny, Nz))
 
 # extract pressure on beam axis
-amp_on_axis = p[:, int(Ny/2 + 1), int(Nz/2 + 1)]
+amp_on_axis = p[:, int(Ny / 2), int(Nz / 2)]
 
 # define axis vectors for plotting
 x_vec = kgrid.x_vec - kgrid.x_vec[0]
@@ -524,32 +593,48 @@ idx = np.argmax(p.flatten())
 mx, my, mz = np.unravel_index(idx, np.shape(p))
 
 # pulse length [s]
-pulse_length = 20e-3  
+pulse_length = 20e-3
 
 # pulse repetition frequency [Hz]
 pulse_rep_freq = 5.0
 
 if (model[mx, my, mz] > 1):
-    Isppa = max_pressure**2 / (2 * np.max(medium.density.flatten()) * np.max(medium.sound_speed.flatten()) ) # [W/m2]
+    Isppa = max_pressure**2 / (2 * np.max(medium.density.flatten()) * np.max(medium.sound_speed.flatten()) )  # [W/m2]
 elif (model[mx, my, mz] == 0):
-    Isppa = max_pressure**2 / (2 * rho_min * c_min) # [W/m2]
+    Isppa = max_pressure**2 / (2 * rho_min * c_min)  # [W/m2]
 
-Isppa = Isppa * 1e-4 # [W/cm2]
-#     Ispta = Isppa * pulse_length * pulse_rep_freq; # [W/cm2]
+Isppa = Isppa * 1e-4  # [W/cm2]
+#     Ispta = Isppa * pulse_length * pulse_rep_freq # [W/cm2]
 
-# MI = max_pressure (in MPa) / sqrt freq (in MHz)
+# MI (mechanical index) is max_pressure (in MPa) / sqrt freq (in MHz)
 MI = max_pressure * 1e-6 / np.sqrt(freq * 1e-6)
 
 # find -6dB focal volume
-# get largest connected component - probably the main focus
-tmp_focal_vol = np.int16( p > 0.5 * np.max( p.flatten() ) )
+dB = -6
+ratio = 10**(dB / 20.0) * max_pressure
+tmp_focal_vol = np.where(p > ratio, p, 0.0)
 
+# get largest connected component - probably the main focus
 cc = measure.label(tmp_focal_vol)
 print(np.shape(cc.label[0]), np.size(cc.label[0]))
 
-#cc = bwconncomp(tmp_focal_vol)
 
-focal_vol = np.size(cc.label[0]) * (dx*1e3)**3
+verts, faces = measure.marching_cubes(p, ratio)
+points = verts
+cells = [("triangle", faces)]
+mesh = meshio.Mesh(points, cells)
+mesh.write("foo2.vtk")
+# open to get volume
+dataset2 = pyvista.read('foo2.vtk')
+islands = dataset2.connectivity(largest=False)
+
+dataset = pyvista.read('foo.vtk')
+# print( dir(dataset) )
+largest = dataset.connectivity(largest=True)
+
+# cc = bwconncomp(tmp_focal_vol)
+
+focal_vol = np.size(cc.label[0]) * (dx * 1e3)**3
 
 del tmp_focal_vol
 del cc
@@ -558,26 +643,23 @@ p_focus = p[focus_coords[0], focus_coords[1], focus_coords[2]]
 isppa_focus = p_focus**2 / (2.0 * rho_min * c_min) * 1e-4
 
 # Check whether max pressure point is in brain
-if (np.linalg.norm( np.array(focus_coords) - np.array([mx,my,mz]) ) * dx * 1e3 > 5):
+if (np.linalg.norm(np.array(focus_coords) - np.array([mx, my, mz]) ) * dx * 1e3 > 5):
     raise ValueError("Maximum pressure point is more than 5 mm away from the intended focus. \nIt is likely that the maximum pressure is at the skull interface. \nPlease check output!")
 
-    
-    # ### Create Plots
-    # figure;
-    # ax1 = axes; imagesc(ax1, imrotate(squeeze(t1_img(mx,:,:)),90), [50,500]);
-    # hold all;
-    # ax2 = axes;
-    # im2 = imagesc(ax2, imrotate(squeeze(p(mx,:,:))*1e-6,90));
-    # im2.AlphaData = 0.5;
-    # linkaxes([ax1,ax2]); ax2.Visible = 'off'; ax2.XTick = []; ax2.YTick = [];
-    # colormap(ax1,'gray')
-    # colormap(ax2,'turbo')
-    # set([ax1,ax2],'Position',[.17 .11 .685 .815]);
-    # cb2 = colorbar(ax2,'Position',[.85 .11 .0275 .815]);
-    # xlabel(cb2, '[MPa]');
-    # title(ax1,'Acoustic Pressure Amplitude')
+    # # Create Plots
+    # fig1 = plt.figure()
+    # ax1 = fig.add_subplot(111, projection='3d')
+    # im1 = ax1.imshow(np.rot90(np.squeeze(t1_img[mx, :, :]), vmin=50, vmax=500, cmap=gray, interpolation='none')
+    # im2 = ax1.imshow(np.rot90(np.squeeze(p[mx, :, :])) * 1e-6, cmap=turbo, interpolation='none', alpha=0.5)
+    # ax1.set_xticks([])
+    # ax1.set_xticks([], minor=True)
+    # ax1.set(title=r'Acoustic Pressure Amplitude')
+    # ax1.grid(False)
+    # cbar1 = fig1.colorbar(im1, ax=ax1)
+    # cbar1.set_label('MPa')
+
     # saveas(gcf, fullfile(output_dir, 'pressure_sag.jpg'));
-    
+
     # figure;
     # ax1 = axes;
     # imagesc(ax1, imrotate(squeeze(t1_img(mx,:,:)),90), [50,500]);
@@ -593,7 +675,7 @@ if (np.linalg.norm( np.array(focus_coords) - np.array([mx,my,mz]) ) * dx * 1e3 >
     # xlabel(cb2, '[MPa]');
     # title(ax1,'50# Acoustic Pressure Amplitude')
     # saveas(gcf, fullfile(output_dir, 'pressure_sag_50#.jpg'));
-    
+
     # figure;
     # ax1 = axes;
     # imagesc(ax1, imrotate(squeeze(t1_img(:,my,:)),90), [50,500]);
@@ -609,7 +691,7 @@ if (np.linalg.norm( np.array(focus_coords) - np.array([mx,my,mz]) ) * dx * 1e3 >
     # xlabel(cb2, '[MPa]');
     # title(ax1,'Acoustic Pressure Amplitude')
     # saveas(gcf, fullfile(output_dir, 'pressure_cor.jpg'));
-    
+
     # figure;
     # ax1 = axes;
     # imagesc(ax1, imrotate(squeeze(t1_img(:,:,mz)),90), [50,500]);
@@ -625,7 +707,7 @@ if (np.linalg.norm( np.array(focus_coords) - np.array([mx,my,mz]) ) * dx * 1e3 >
     # xlabel(cb2, '[MPa]');
     # title(ax1,'Acoustic Pressure Amplitude')
     # saveas(gcf, fullfile(output_dir, 'pressure_ax.jpg'));
-    
+
     # ### Save pressure field and -6dB volume as nifti file
     # p_out = zeros(size(ct_img),'double');
     # p_out(idx1[0,0]:idx1[0,1], idx1[1,0]:idx1[1,1], idx1[2,0]:idx1[2,1]) = ...
@@ -635,19 +717,19 @@ if (np.linalg.norm( np.array(focus_coords) - np.array([mx,my,mz]) ) * dx * 1e3 >
     # header.Filename=[]; header.Filemoddate=[]; header.Filesize=[]; header.raw=[];
     # header.Datatype='double'; header.BitsPerPixel=32;
     # niftiwrite(p_out, fullfile(output_dir, 'pressure_field.nii'), header);
-    
+
     # focal_vol_bin = int16(p_out > 0.5*max_pressure);
     # cc = bwconncomp(focal_vol_bin);
     # focal_vol_lcc = int16(zeros(size(p_out)));
     # focal_vol_lcc(cc.PixelIdxList{1}) = 1;
     # header.Datatype='int16'; header.BitsPerPixel=16;
     # niftiwrite(focal_vol_lcc, fullfile(output_dir, 'focal_volume_bin.nii'), header);
-    
+
     # # find max pressure point on original image
     # [max_pressure, ~] = max(p_out(logical(focal_vol_lcc))); # [Pa]
     # idx = find(p_out==max_pressure);
     # [mx, my, mz] = ind2sub(size(p_out), idx);
-    
+
     # ### Summary
     # # Print summary to command window
     # print('PPW = ' num2str(ppw))
@@ -660,11 +742,11 @@ if (np.linalg.norm( np.array(focus_coords) - np.array([mx,my,mz]) ) * dx * 1e3 >
     # print('Isppa at focus = ' num2str(isppa_focus) ' W/cm2')
     # print('-6dB focal volume = ' num2str(focal_vol) ' mm3')
     # print(' ')
-    
+
     # # save output file in output_dir
     # clear source sensor_data;
     # save(fullfile(output_dir, 'acoustic_sim_output.mat'));
-    
+
     # # Write summary to spreadsheet
     # # create result file if it does not exist and write header
     # if ~exist(fullfile(output_dir, 'simulation_results.csv'), 'file')
@@ -678,7 +760,7 @@ if (np.linalg.norm( np.array(focus_coords) - np.array([mx,my,mz]) ) * dx * 1e3 >
     #         '-6dB focal volume (mm3)']);
     #     fclose(fileID);
     # end
-    
+
     # # write values
     # fileID = fopen(fullfile(output_dir, 'simulation_results.csv'),'a');
     # fprintf(fileID,['#s, #d #d #d, #d #d #d, #d, ' ...
@@ -688,4 +770,3 @@ if (np.linalg.norm( np.array(focus_coords) - np.array([mx,my,mz]) ) * dx * 1e3 >
     #     ppw, cfl, ppp, mx, my, mz, ...
     #     max_pressure * 1e-6, MI, Isppa, p_focus * 1e-6, isppa_focus, focal_vol);
     # fclose(fileID);
-

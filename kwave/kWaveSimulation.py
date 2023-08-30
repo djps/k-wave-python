@@ -520,6 +520,8 @@ class kWaveSimulation(object):
         self.create_sensor_variables()
         self.create_absorption_vars()
         self.assign_pseudonyms(self.medium, self.kgrid)
+        # source terms scaled here
+        print("opt.scale_source_terms:", opt.scale_source_terms)
         self.scale_source_terms(opt.scale_source_terms)
         self.create_pml_indices(
             kgrid_dim=self.kgrid.dim,
@@ -1248,7 +1250,6 @@ class kWaveSimulation(object):
         # expand the computational grid if the PML is set to be outside the input
         # grid defined by the user
         if opt.pml_inside is False:
-            print("if opt.pml_inside is False:")
             expand_results = expand_grid_matrices(
                 self.kgrid, self.medium, self.source, self.sensor, self.options,
                 dotdict({

@@ -20,10 +20,10 @@ def scale_source_terms_func(
     Returns:
 
     """
-    dx, dy, dz  = kgrid.dx, kgrid.dy, kgrid.dz,
+    dx, dy, dz = kgrid.dx, kgrid.dy, kgrid.dz,
 
     # get the dimension size
-    N = kgrid.dim
+    N = float(kgrid.dim)
 
     if not check_conditions(flags.nonuniform_grid, flags.source_uy, flags.source_uz, flags.transducer_source):
         return
@@ -114,7 +114,6 @@ def scale_pressure_source(is_source_p, source, kgrid, N, c0, dx, dt, p_source_po
     else:
         if is_nonuniform_grid:
             source.p = scale_pressure_source_nonuniform_grid(source.p, kgrid, c0, N, dt, p_source_pos_index)
-
         else:
             source.p = scale_pressure_source_uniform_grid(source.p, c0, N, dx, dt, p_source_pos_index)
 
@@ -175,13 +174,14 @@ def scale_pressure_source_uniform_grid(source_p, c0, N, dx, dt, p_source_pos_ind
     if c0.size == 1:
         # compute the scale parameter based on the homogeneous
         # sound speed
-        source_p = source_p * (2 * dt / (N * c0 * dx))
+        source_p = source_p * (2.0 * dt / (N * c0.item() * dx))
 
     else:
         # compute the scale parameter seperately for each source
         # position based on the sound speed at that position
+        print("else")
         for p_index in range(source_p[:, 0].size):
-            source_p[p_index, :] = source_p[p_index, :] * (2 * dt / (N * matlab_mask(c0, p_source_pos_index.flatten('F')[p_index]) * dx))
+            source_p[p_index, :] = source_p[p_index, :] * (2.0 * dt / (N * matlab_mask(c0, p_source_pos_index.flatten('F')[p_index]) * dx))
     return source_p
 
 
@@ -220,7 +220,7 @@ def scale_stress_source(source, c0, is_source_exists, is_p0_exists, source_val, 
 
                 # compute the scale parameter based on the homogeneous sound
                 # speed
-                source_val = source_val * (2 * dt * c0 / (N * dx))
+                source_val = source_val * (2.0 * dt * c0 / (N * dx))
 
             else:
 
@@ -262,7 +262,7 @@ def apply_velocity_source_corrections(
 
 
 def apply_source_correction(source_val, frequency_ref, dt):
-    return source_val * math.cos(2 * math.pi * frequency_ref * dt/2)
+    return source_val * math.cos(2 * math.pi * frequency_ref * dt / 2.0)
 
 
 def scale_velocity_sources(flags, source, kgrid, c0, dt, dx, dy, dz, u_source_pos_index):

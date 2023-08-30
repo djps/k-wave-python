@@ -1,0 +1,29 @@
+2023-08-17 17:09:14,793 | __main__ | INFO | simulation_options
+2023-08-17 17:09:14,795 | __main__ | INFO | execution_options
+2023-08-17 17:09:14,796 | __main__ | INFO | kspaceFirstOrder3DG
+2023-08-18 10:41:33,513 | __main__ | INFO | done grid
+2023-08-18 10:41:33,515 | __main__ | INFO | done kWaveArray
+2023-08-18 10:41:33,516 | __main__ | INFO | done add_annular_array
+2023-08-18 10:41:33,516 | __main__ | INFO | done create_cw_signals
+2023-08-18 10:41:33,517 | __main__ | INFO | done kSource
+2023-08-18 10:43:34,614 | __main__ | INFO | done grid
+2023-08-18 10:43:34,614 | __main__ | INFO | done kWaveArray
+2023-08-18 10:43:34,621 | __main__ | INFO | done add_annular_array
+2023-08-18 10:43:34,621 | __main__ | INFO | done create_cw_signals
+2023-08-18 10:43:34,621 | __main__ | INFO | done kSource
+2023-08-18 10:44:03,041 | __main__ | INFO | done grid
+2023-08-18 10:44:03,041 | __main__ | INFO | done kWaveArray
+2023-08-18 10:44:03,041 | __main__ | INFO | done add_annular_array
+2023-08-18 10:44:03,041 | __main__ | INFO | done create_cw_signals
+2023-08-18 10:44:03,041 | __main__ | INFO | done kSource
+2023-08-18 10:45:38,609 | __main__ | INFO | done kWaveGrid
+2023-08-18 10:45:38,609 | __main__ | INFO | done kWaveArray
+2023-08-18 10:45:38,609 | __main__ | INFO | done add_annular_array
+2023-08-18 10:45:38,609 | __main__ | INFO | done create_cw_signals
+2023-08-18 10:45:38,609 | __main__ | INFO | done kSource
+2023-08-18 10:52:46,735 | __main__ | INFO | done get_array_binary_mask
+2023-08-18 11:25:12,681 | __main__ | INFO | done get_distributed_source_signal
+2023-08-18 11:25:12,683 | __main__ | INFO | done kSensor
+2023-08-18 11:25:12,687 | __main__ | INFO | simulation_options
+2023-08-18 11:25:12,690 | __main__ | INFO | execution_options
+2023-08-18 11:25:12,696 | __main__ | INFO | kspaceFirstOrder3DG

@@ -129,8 +129,8 @@ class kWaveArray(object):
         for el_ind in range(annular_array_num_el):
             self.number_elements += 1
 
-            varphi_min = arcsin(diameters[el_ind][0] / (2 * radius))
-            varphi_max = arcsin(diameters[el_ind][1] / (2 * radius))
+            varphi_min = arcsin(diameters[el_ind][0] / (2.0 * radius))
+            varphi_max = arcsin(diameters[el_ind][1] / (2.0 * radius))
 
             area = 2 * pi * radius ** 2 * (1 - cos(varphi_max)) - 2 * pi * radius ** 2 * (1 - cos(varphi_min))
 
@@ -140,7 +140,7 @@ class kWaveArray(object):
                 element_number=el_ind + 1,
                 type='annulus',
                 dim=2,
-                #position=array(position, dtype=np.uint8), # bad cast.
+                # position=array(position, dtype=np.uint8), # bad cast.
                 position=array(position),
                 radius_of_curvature=radius,
                 inner_diameter=diameters[el_ind][0],
@@ -388,13 +388,14 @@ class kWaveArray(object):
         return grid_weights
 
     def get_array_binary_mask(self, kgrid):
+        """get binary mask for the complete array, over all elements"""
         self.check_for_elements()
 
         mask = np.zeros((kgrid.Nx, kgrid.Ny, max(kgrid.Nz, 1)), dtype=bool)
 
         for ind in range(self.number_elements):
             grid_weights = self.get_off_grid_points(kgrid, ind, True)
-            mask |= grid_weights
+            mask = np.bitwise_or(np.squeeze(mask), grid_weights)
 
         return mask
 
@@ -414,7 +415,7 @@ class kWaveArray(object):
         # apply transformation
         vec = np.append(vec, [1])
         vec = np.matmul(self.array_transformation, vec)
-        return vec
+        return vec[:-2]  # is vec(1:end-1)';
 
     def get_off_grid_points(self, kgrid, element_num, mask_only):
 
@@ -521,6 +522,9 @@ class kWaveArray(object):
 
         # compute scaling factor
         scale = m_grid / m_integration
+        # print("integration points:", np.shape(integration_points))
+        # print("m_grid info:", self.elements[element_num].measure, kgrid.dx, self.elements[element_num].dim)
+        # print("scale:", scale, m_grid, m_integration)
 
         if self.axisymmetric:
             # create new expanded grid
@@ -557,45 +561,65 @@ class kWaveArray(object):
 
         self.check_for_elements()
 
+        # this computes the offgrid points aswell
         mask = self.get_array_binary_mask(kgrid)
-        mask_ind = matlab_find(mask).squeeze(axis=-1)
-        num_source_points = np.sum(mask)
 
-        Nt = np.shape(source_signal)[1]
+        # matlab indices for all nonzero elements of the mask
+        mask_ind = matlab_find(mask).squeeze(axis=-1)
+
+        num_source_points: int = int(np.sum(mask))
+
+        Nt: int = np.shape(source_signal)[1]
+        print(Nt, np.shape(source_signal))
 
         if self.single_precision:
             data_type = 'float32'
-            sz_bytes = num_source_points * Nt * 4
+            sz_bytes = int(num_source_points) * int(Nt) * int(4)
         else:
             data_type = 'float64'
-            sz_bytes = num_source_points * Nt * 8
+            sz_bytes = int(num_source_points) * int(Nt) * int(8)
 
-        sz_ind = 0
+        sz_ind: int = int(0)
         while sz_bytes > 1024:
-            sz_bytes = sz_bytes / 1024
-            sz_ind += 1
+            sz_bytes = int(sz_bytes) / int(1024)
+            sz_ind += int(1)
 
         prefixes = ['', 'K', 'M', 'G', 'T']
-        sz_bytes = round(sz_bytes, 2)
-        print(f'approximate size of source matrix: {str(sz_bytes)} {prefixes[sz_ind]} B ( {data_type} precision)')
+        sz_bytes = int(round(sz_bytes, 2))
+        print(f'approximate size of source matrix: {str(sz_bytes)} {prefixes[sz_ind]}B ({data_type} precision)')
 
         source_signal = source_signal.astype(data_type)
 
+        # initialise the source signal
         distributed_source_signal = np.zeros((num_source_points, Nt), dtype=data_type)
 
+        # loop through the elements
         for ind in range(self.number_elements):
+            # get the offgrid source weights for each transducer element. This varies
             source_weights = self.get_element_grid_weights(kgrid, ind)
 
+            # get indices of the non-zero points of offgrid source weights
             element_mask_ind = matlab_find(np.array(source_weights), val=0, mode='neq').squeeze(axis=-1)
 
+            # convert these to indices in the distributed source.
+            # both non-zero elements. has shape of mask_ind. This returns an array of booleans for same values
             local_ind = np.isin(mask_ind, element_mask_ind)
 
-            distributed_source_signal[local_ind] += (
-                    matlab_mask(source_weights, element_mask_ind - 1) * source_signal[ind, :][None, :]
-            )
+            # add to distributed source
+            # distributed_source_signal[local_ind] += (
+            #     matlab_mask(source_weights, element_mask_ind - 1) * source_signal[ind, :][None, :])
+            distributed_source_signal[local_ind, :] = distributed_source_signal[local_ind, :] + matlab_mask(source_weights, element_mask_ind - 1) * source_signal[ind, :]
+
+            mx, mt = np.unravel_index( np.argmax( np.abs(distributed_source_signal) ), np.shape(distributed_source_signal) )
+            print(mx, mt)
+            print(distributed_source_signal[mx, 0:10])
 
         end_time = time.time()
         print(f'total computation time : {end_time - start_time:.2f} s')
+
+        mx, mt = np.unravel_index( np.argmax( np.abs(distributed_source_signal) ), np.shape(distributed_source_signal) )
+        print(mx, mt)
+        print(distributed_source_signal[mx, :])
 
         return distributed_source_signal
 
@@ -605,7 +629,7 @@ class kWaveArray(object):
         mask = self.get_array_binary_mask(kgrid)
         mask_ind = matlab_find(mask).squeeze(axis=-1)
 
-        Nt = np.shape(sensor_data)[1]
+        Nt = np.shape(sensor_data)[0]
 
         combined_sensor_data = np.zeros((self.number_elements, Nt))
 
@@ -661,7 +685,7 @@ def off_grid_points(kgrid, points,
                     bli_tolerance=0.1,
                     bli_type='sinc',
                     mask_only=False,
-                    single_precision=False,
+                    single_precision=True,
                     debug=False,
                     display_wait_bar=False):
 
@@ -747,9 +771,9 @@ def off_grid_points(kgrid, points,
         # convert to the computational coordinate if the physical coordinate is
         # sampled nonuniformly
         if kgrid.nonuniform:
-            point, BLIscale = mapPoint(kgrid, point)
+            raise NotImplementedError("point, BLIscale = mapPoint(kgrid, point) not implemented")
 
-        if bli_tolerance == 0:
+        if (bli_tolerance == 0):
             if mask_only:
                 mask = np.ones(mask.shape, dtype=bool)
                 return mask
@@ -767,7 +791,7 @@ def off_grid_points(kgrid, points,
                     elif bli_type == 'exact':
                         mask_t_x = get_delta_bli(kgrid.Nx, kgrid.dx, x_vec, point[0])
                         mask_t_y = get_delta_bli(kgrid.Ny, kgrid.dy, y_vec, point[1])
-
+                    # add the contributions to the overall source mask
                     mask = mask + scale[point_ind] * (mask_t_x @ mask_t_y.T)
 
                 elif kgrid.dim == 3:
@@ -779,35 +803,45 @@ def off_grid_points(kgrid, points,
                         mask_t_x = get_delta_bli(kgrid.Nx, kgrid.dx, x_vec, point[0])
                         mask_t_y = get_delta_bli(kgrid.Ny, kgrid.dy, y_vec, point[1])
                         mask_t_z = get_delta_bli(kgrid.Nz, kgrid.dz, z_vec, point[2])
-
-                    mask = mask + scale[point_ind] * np.reshape(np.kron(mask_t_y @ mask_t_z.T, mask_t_x),
-                                                                [kgrid.Nx, kgrid.Ny, kgrid.Nz])
-
+                    # add the contributions to the overall source mask
+                    mask = mask + scale[point_ind] * np.reshape(
+                        np.kron(mask_t_y @ mask_t_z.T, mask_t_x), [kgrid.Nx, kgrid.Ny, kgrid.Nz])
+        # if bli is not zero
         else:
+            icounter = 0
+            iterate = 0
             # create an array of neighbouring grid points for BLI evaluation
             if kgrid.dim == 1:
-                ind, is_ = tol_star(bli_tolerance, kgrid, point, debug)
+                ind, is_, _, _, _ = tol_star(bli_tolerance, kgrid, point, debug, iterate=iterate)
                 xs = x_vec[is_]
                 xyz = xs
             elif kgrid.dim == 2:
-                ind, is_, js = tol_star(bli_tolerance, kgrid, point, debug)
+                ind, is_, js_, _, _ = tol_star(bli_tolerance, kgrid, point, debug, iterate=iterate)
                 xs = x_vec[is_]
-                ys = y_vec[js]
+                ys = y_vec[js_]
                 xyz = np.array([xs, ys]).T
             elif kgrid.dim == 3:
-                ind, is_, js, ks = tol_star(bli_tolerance, kgrid, point, debug)
-                xs = x_vec[is_.astype(int)].squeeze(axis=-1)
-                ys = y_vec[js.astype(int)].squeeze(axis=-1)
-                zs = z_vec[ks.astype(int)].squeeze(axis=-1)
+                if point_ind < 10:
+                    debug = True
+                else:
+                    debug = False
+                # a vector of flattened indices as well as the (i,j,k) values for the BLI
+                ind, is_, js_, ks_, iterate = tol_star(bli_tolerance, kgrid, point, debug=debug, iterate=iterate)
+                icounter = icounter + 1
+                xs = x_vec[is_].squeeze(axis=-1)
+                ys = y_vec[js_].squeeze(axis=-1)
+                zs = z_vec[ks_].squeeze(axis=-1)
                 xyz = np.array([xs, ys, zs]).T
-
-            ind = ind.astype(int)
+                # if (point_ind == 100):
+                #     print(np.shape(is_), is_, "\n",
+                #           np.shape(js_), js_, "\n",
+                #           np.shape(ks_), ks_, "\n")
 
             if mask_only:
-                # add current points to the mask
-                mask = matlab_assign(mask, ind - 1, True)
+                # add current points to the mask. this is 0-indexed function.
+                mask = matlab_assign(mask, ind, True)
             else:
-                # evaluate a BLI centered on point at grid nodes XYZ
+                # evaluate a BLI centered on point at the grid nodes in XYZ
                 if scalar_dxyz:
                     if single_precision:
                         mask_t = sinc(pi_on_dxyz * (xyz - point.T))
@@ -818,18 +852,40 @@ def off_grid_points(kgrid, points,
                         mask_t = sinc(pi_on_dxyz * (xyz - point.T))
                     else:
                         mask_t = sinc(pi_on_dxyz * (xyz - point.T))
+
+                print(single_precision, type(mask_t[0]))
+
+                # for all points, take the product
+                if (np.size(xyz) > kgrid.dim):
+                    mask_t = np.squeeze(mask_t)
+
+                # if (point_ind == 100):
+                #     print(np.linalg.norm(mask_t), np.size(mask_t), np.ndim(mask_t), np.shape(mask_t))
+
                 mask_t = np.prod(mask_t, axis=1)
+
+                # if (point_ind == 100):
+                #     print(np.linalg.norm(mask_t), np.size(mask_t), np.ndim(mask_t))
 
                 # apply scaling for non-uniform grid
                 if kgrid.nonuniform:
-                    mask_t = mask_t * BLIscale
+                    raise NotImplementedError("mask_t = mask_t * BLIscale; not implemented")
 
                 # add this contribution to the overall source mask
+                # if (point_ind == 100):
+                #     print(matlab_mask(mask, ind))
+                #     print(matlab_mask(mask, ind).squeeze(axis=-1))
+                #     print(scale[point_ind] )
+                #     print(mask_t )
+                #     print(scale[point_ind] * mask_t)
+                vals = matlab_mask(mask, ind).squeeze(axis=-1) + scale[point_ind] * mask_t
                 mask = matlab_assign(mask,
-                                     ind - 1,
-                                     matlab_mask(mask, ind - 1).squeeze(axis=-1) + scale[point_ind] * mask_t)
+                                     ind,
+                                     vals)
 
         # update the waitbar
-        if display_wait_bar and (point_ind % wait_bar_update_freq == 0):
+        if (display_wait_bar and (point_ind % wait_bar_update_freq == 0)):
             tqdm.update(wait_bar_update_freq)
+
+    # return the mask
     return mask

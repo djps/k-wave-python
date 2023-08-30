@@ -61,7 +61,7 @@ transducer = 'CTX500'
 pressure = 51590.0
 
 # phase offsets [degrees]
-phase = np.array([0, 319.0, 278.0, 237.0])
+phase = np.array([0, 319, 278, 237])
 
 # bowl radius of curvature [m]
 source_roc = 63.2e-3
@@ -224,19 +224,19 @@ bx: int = 9
 fx: int = 53
 
 # set bowl position - offset by pml
-bowl_pos = [kgrid.x_vec[bx + pml_x_size].item(),
+bowl_pos = [float(kgrid.x_vec[bx + pml_x_size]),
             0.0,
             0.0]
 
 # set focus position - offset by pml
-focus_pos = [kgrid.x_vec[fx + pml_x_size].item(),
+focus_pos = [float(kgrid.x_vec[fx + pml_x_size]),
              0.0,
              0.0]
 
-# create empty kWaveArray in order to specify the transducer properties. Note the default for single_precision in matlab is false
+# create empty kWaveArray in order to specify the transducer properties
 karray = kWaveArray(bli_tolerance=0.01,
                     upsampling_rate=16,
-                    single_precision=False)
+                    single_precision=True)
 
 # add a bowl shaped transducer
 karray.add_annular_array(bowl_pos, source_roc, diameters, focus_pos)
@@ -262,10 +262,9 @@ source.p = karray.get_distributed_source_signal(kgrid, source_sig)
 # DEFINE THE SIMULATION PARAMETERS
 # =========================================================================
 
-input_filename = 'brics_water_input_1.h5'
-output_filename = 'brics_water_output_1.h5'
-# DATA_CAST = 'double'
-DATA_CAST = 'off'
+input_filename = 'brics_water_input.h5'
+output_filename = 'brics_water_output.h5'
+DATA_CAST = 'single'
 DATA_PATH = './data/water/'
 BINARY_PATH = './kwave/bin/windows/'
 
@@ -275,16 +274,16 @@ if verbose:
 
 # options for writing to file, but not doing simulations
 simulation_options = SimulationOptions(
-    # data_cast=DATA_CAST,
-    # data_recast=True,  # sensor data back as double
+    data_cast=DATA_CAST,
+    data_recast=True,
+    # pml_size=pml_size,
     save_to_disk=True,
     input_filename=input_filename,
     output_filename=output_filename,
     pml_auto=True,
     save_to_disk_exit=False,
     data_path=DATA_PATH,
-    pml_inside=False,
-    scale_source_terms=True)
+    pml_inside=False)
 
 if verbose:
     logger.info("execution_options")
@@ -311,6 +310,15 @@ sensor_data = kspaceFirstOrder3DG(
     simulation_options=simulation_options,
     execution_options=execution_options)
 
+# This is how the data is actually output from the executable
+# with h5py.File(os.path.join(DATA_PATH, output_filename), 'r') as hf:
+#     sensor_data0 = np.array(hf['p'])[0].T
+#     print(np.shape(sensor_data), np.shape(sensor_data0))
+#     a = np.reshape(sensor_data, (128, 128, 128, 31))
+#     b = np.reshape(sensor_data, (128, 128, 128, 31))
+#     print(a[int(Nx / 2), int(Ny / 2), :, 0:10] )
+#     print(b[int(Nx / 2), int(Ny / 2), :, 0:10] )
+
 
 # =========================================================================
 # POST-PROCESS
@@ -326,11 +334,11 @@ fs = 1.0 / kgrid.dt
 amp, phi, f = extract_amp_phase(sensor_data, fs, freq, dim=1,
                                 fft_padding=1, window='Rectangular')
 
-# reshape data: matlab uses Fortran ordering
-p = np.reshape(amp, (Nx, Ny, Nz), order='F')
+# reshape data
+p = np.reshape(amp, (Nx, Ny, Nz), order='C')
 
 # extract pressure on beam axis
-amp_on_axis = p[:, int(Ny / 2), int(Nz / 2)]
+amp_on_axis = p[int(Nx / 2), int(Ny / 2), :]
 
 # define axis vectors for plotting: set from (0, Nx*dx) by shifting
 x_vec = kgrid.x_vec - kgrid.x_vec[0]
@@ -391,45 +399,64 @@ if verbose:
     msg = 'Ispta = ' + str(Ispta * 1e3) + ' mW/cm2'
     logger.info(str(msg))
 
+# find -6dB focal volume
+dB = -6
+ratio = 10**(dB / 20.0) * max_pressure
+tmp_focal_vol = np.where(p > ratio, p, 0.0)
+
+# get largest connected component - probably the main focus
+cc = measure.label(tmp_focal_vol)
+print(np.shape(cc.label[0]), np.size(cc.label[0]))
+
+
+verts, faces = measure.marching_cubes(p, ratio)
+points = verts
+cells = [("triangle", faces)]
+mesh = meshio.Mesh(points, cells)
+mesh.write("foo2.vtk")
+# open to get volume
+dataset2 = pyvista.read('foo2.vtk')
+islands = dataset2.connectivity(largest=False)
+
 if doPlotting:
     # plot pressure on beam axis
     fig1, ax1 = plt.subplots()
-    ax1.plot(x_vec, amp_on_axis, color='blue', marker='.', linestyle='-', linewidth=2, markersize=6)
+    ax1.plot(x_vec, amp_on_axis, color='blue', marker='.', linestyle='-', linewidth=2, markersize=12)
 
     ax1.set(xlabel=r'Axial Position [mm]',
             ylabel=r'Pressure [MPa]',
             title=r'Axial Pressure')
     ax1.grid(True)
-    # if savePlotting:
-    #     fig1.savefig("axial.png")
+    if savePlotting:
+        fig1.savefig("axial.png")
 
-    # # plot the pressure field at mid point along z axis
-    # fig2, ax2 = plt.subplots()
-    # extent = [np.min(x_vec), np.max(x_vec),
-    #           np.min(y_vec), np.max(y_vec)]
-    # ax2.imshow(np.rot90(p[:, :, int(Nz / 2)]),
-    #            aspect='auto',
-    #            interpolation='none',
-    #            extent=extent,
-    #            origin='lower',
-    #            cmap='turbo')
-    # ax2.set(xlabel=r'$x$ [mm]',
-    #         ylabel=r'$y$ [mm]',
-    #         title=r'Pressure Field')
-    # ax2.grid(False)
+    # plot the pressure field at mid point along z axis
+    fig2, ax2 = plt.subplots()
+    extent = [np.min(x_vec), np.max(x_vec),
+              np.min(y_vec), np.max(y_vec)]
+    ax2.imshow(np.rot90(p[:, :, int(Nz / 2)]),
+               aspect='auto',
+               interpolation='none',
+               extent=extent,
+               origin='lower',
+               cmap='turbo')
+    ax2.set(xlabel=r'$x$ [mm]',
+            ylabel=r'$y$ [mm]',
+            title=r'Pressure Field')
+    ax2.grid(False)
 
-    # fig3, ax3 = plt.subplots()
-    # extent = [np.min(x_vec), np.max(x_vec),
-    #           np.min(y_vec), np.max(y_vec)]
-    # ax3.imshow(p[:, int(Ny / 2), :],
-    #            aspect='auto',
-    #            interpolation='none',
-    #            extent=extent,
-    #            origin='lower',
-    #            cmap='turbo')
-    # ax3.set(xlabel=r'Axial Position [mm]',
-    #         ylabel=r'Lateral Position [mm]',
-    #         title=r'Pressure Field')
-    # ax3.grid(False)
+    fig3, ax3 = plt.subplots()
+    extent = [np.min(x_vec), np.max(x_vec),
+              np.min(y_vec), np.max(y_vec)]
+    ax3.imshow(p[:, int(Ny / 2), :],
+               aspect='auto',
+               interpolation='none',
+               extent=extent,
+               origin='lower',
+               cmap='turbo')
+    ax3.set(xlabel=r'Axial Position [mm]',
+            ylabel=r'Lateral Position [mm]',
+            title=r'Pressure Field')
+    ax3.grid(False)
 
     plt.show()
