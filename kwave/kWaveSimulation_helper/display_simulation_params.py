@@ -12,7 +12,7 @@ def display_simulation_params(kgrid: kWaveGrid, medium: kWaveMedium, elastic_cod
     k_size = kgrid.size
 
     # display time step information
-    print('  dt: ', f'{scale_SI(dt)[0]}s, t_end: {scale_SI(t_array_end)[0]}s, time steps:', Nt)
+    print(f'  dt: {scale_SI(dt)[0]}s, t_end: {scale_SI(t_array_end)[0]}s, time steps:', Nt)
 
     c_min, c_min_comp, c_min_shear = get_min_sound_speed(medium, elastic_code)
 
@@ -49,7 +49,9 @@ def print_grid_size(kgrid, scale):
     elif kgrid.dim == 2:
         grid_size_scale     = [k_size[0] * scale, k_size[1] * scale]
     elif kgrid.dim == 3:
-        grid_size_scale     = [round(k_size[0]*scale, 4), round(k_size[1]*scale, 4), round(k_size[2]*scale, 4)]
+        grid_size_scale     = grid_size_scale = [scale_SI(kgrid.Nx * kgrid.dx)[0] + 'm', 
+                                                 scale_SI(kgrid.Ny * kgrid.dy)[0] + 'm', 
+                                                 scale_SI(kgrid.Nz * kgrid.dz)[0] + 'm']
     else:
         raise NotImplementedError
 
@@ -66,22 +68,18 @@ def print_max_supported_freq(kgrid, c_min):
 
     if kgrid.dim == 1:
         # display maximum supported frequency
-        print('  maximum supported frequency: ', scale_SI(k_max_all * c_min / (2*np.pi))[0], 'Hz')
+        print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]} Hz')
 
     elif kgrid.dim == 2:
         # display maximum supported frequency
         if k_max.x == k_max.y:
-            print('  maximum supported frequency: ', scale_SI(k_max_all * c_min / (2*np.pi))[0], 'Hz')
+            print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]} Hz')
         else:
-            print('  maximum supported frequency: ', scale_SI(k_max.x * c_min / (2*np.pi))[0],
-                  'Hz by ', scale_SI(kgrid.ky_max * c_min / (2*np.pi))[0], 'Hz')
+            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]} Hz by {scale_SI(kgrid.ky_max * c_min / (2*np.pi))[0]} Hz')
 
     elif kgrid.dim == 3:
         # display maximum supported frequency
         if k_max.x == k_max.z and k_max.x == k_max.y:
-            print('  maximum supported frequency: ', f'{scale_SI(k_max_all * c_min / (2*np.pi))[0]}Hz')
+            print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]} Hz')
         else:
-            print('  maximum supported frequency: ',
-                  f'{scale_SI(k_max.x * c_min / (2*np.pi))[0]}Hz by '
-                  f'{scale_SI(k_max.y * c_min / (2*np.pi))[0]}Hz by '
-                  f'{scale_SI(k_max.z * c_min / (2*np.pi))[0]}Hz')
+            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]} Hz by {scale_SI(k_max.y * c_min / (2*np.pi))[0]} Hz by {scale_SI(k_max.z * c_min / (2*np.pi))[0]} Hz')
