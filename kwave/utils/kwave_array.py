@@ -1,7 +1,7 @@
 import time
 from dataclasses import dataclass
 from math import ceil
-from typing import Optional
+from typing import Optional, Union, List
 
 import numpy as np
 from numpy import arcsin, pi, cos, size, array
@@ -38,7 +38,7 @@ class Element:
 
     length: Optional[float] = None
     width: Optional[float] = None
-    orientation: Optional = None
+    orientation: Optional[Union[List[float], np.ndarray, float]] = None
 
     start_point: Optional[np.ndarray] = None
     end_point: Optional[np.ndarray] = None
@@ -141,7 +141,6 @@ class kWaveArray(object):
                 element_number=el_ind + 1,
                 type='annulus',
                 dim=2,
-                # position=array(position, dtype=np.uint8), # bad cast.
                 position=array(position),
                 radius_of_curvature=radius,
                 inner_diameter=diameters[el_ind][0],
@@ -525,9 +524,6 @@ class kWaveArray(object):
 
         # compute scaling factor
         scale = m_grid / m_integration
-        # print("integration points:", np.shape(integration_points))
-        # print("m_grid info:", self.elements[element_num].measure, kgrid.dx, self.elements[element_num].dim)
-        # print("scale:", scale, m_grid, m_integration)
 
         if self.axisymmetric:
             # create new expanded grid
@@ -543,7 +539,7 @@ class kWaveArray(object):
                                            mask_only=mask_only,
                                            single_precision=self.single_precision)
 
-            # keep points in the positive y domain
+            # keep points in the positive y domain - should this be just kgrid.Ny
             grid_weights = grid_weights[:, kgrid.Ny + 1:]
 
         else:
@@ -681,7 +677,7 @@ def off_grid_points(kgrid, points,
                     bli_tolerance=0.1,
                     bli_type='sinc',
                     mask_only=False,
-                    single_precision=True,
+                    single_precision=False,
                     debug=False,
                     display_wait_bar=False):
 
