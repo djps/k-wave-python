@@ -110,7 +110,7 @@ class kWaveSimulation(object):
         self.LOG_NAME                        = ['k-Wave-Log-', get_date_string()]  #: default log filename
 
         self.calling_func_name = None
-        print(f'  start time: {get_date_string()}')
+        # print(f'  start time: {get_date_string()}')
 
         self.c_ref, self.c_ref_compression, self.c_ref_shear = [None] * 3
         self.transducer_input_signal = None
