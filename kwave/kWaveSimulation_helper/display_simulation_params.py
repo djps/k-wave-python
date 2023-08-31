@@ -75,11 +75,14 @@ def print_max_supported_freq(kgrid, c_min):
         if k_max.x == k_max.y:
             print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]} Hz')
         else:
-            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]} Hz by {scale_SI(kgrid.ky_max * c_min / (2*np.pi))[0]} Hz')
+            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]} Hz ' + 
+                  f'by {scale_SI(kgrid.ky_max * c_min / (2*np.pi))[0]} Hz')
 
     elif kgrid.dim == 3:
         # display maximum supported frequency
         if k_max.x == k_max.z and k_max.x == k_max.y:
             print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]} Hz')
         else:
-            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]} Hz by {scale_SI(k_max.y * c_min / (2*np.pi))[0]} Hz by {scale_SI(k_max.z * c_min / (2*np.pi))[0]} Hz')
+            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]} Hz' + 
+                  f'by {scale_SI(k_max.y * c_min / (2*np.pi))[0]} Hz ' +
+                  f'by {scale_SI(k_max.z * c_min / (2*np.pi))[0]} Hz')

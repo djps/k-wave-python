@@ -610,7 +610,8 @@ class kWaveArray(object):
             # add to distributed source
             # distributed_source_signal[local_ind] += (
             #     matlab_mask(source_weights, element_mask_ind - 1) * source_signal[ind, :][None, :])
-            distributed_source_signal[local_ind, :] = distributed_source_signal[local_ind, :] + matlab_mask(source_weights, element_mask_ind - 1) * source_signal[ind, :]
+            distributed_source_signal[local_ind, :] = distributed_source_signal[local_ind, :] + \
+                                                      matlab_mask(source_weights, element_mask_ind - 1) * source_signal[ind, :]
 
 
         end_time = time.time()
