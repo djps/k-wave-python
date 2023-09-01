@@ -844,6 +844,8 @@ def off_grid_points(kgrid, points,
                 # for all points, take the product
                 if (np.size(xyz) > kgrid.dim):
                     mask_t = np.squeeze(mask_t)
+                else:
+                    mask_t = np.squeeze(mask_t, axis=0)
 
                 mask_t = np.prod(mask_t, axis=1)
 
