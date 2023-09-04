@@ -9,6 +9,7 @@ from numpy.linalg import linalg
 
 import kwave
 from kwave.kgrid import kWaveGrid
+from kwave.utils.data import scale_time
 from kwave.utils.conversion import tol_star
 from kwave.utils.interp import get_delta_bli
 from kwave.utils.mapgen import trim_cart_points, make_cart_rect, make_cart_arc, make_cart_bowl, make_cart_disc, \
@@ -611,7 +612,8 @@ class kWaveArray(object):
 
 
         end_time = time.time()
-        print(f'total computation time : {end_time - start_time:.2f} s')
+        duration = int(end_time - start_time)
+        print(f'total computation time: {scale_time(duration)}')
 
         return distributed_source_signal
 

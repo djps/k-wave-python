@@ -59,7 +59,7 @@ def print_grid_size(kgrid, scale):
     grid_scale_str  = ' by '.join(map(str, grid_size_scale))
 
     # display grid size
-    print(f'  input grid size: {grid_size_str} grid points ({grid_scale_str} m)')
+    print(f'  input grid size: {grid_size_str} grid points ({grid_scale_str})')
 
 
 def print_max_supported_freq(kgrid, c_min):
@@ -68,21 +68,21 @@ def print_max_supported_freq(kgrid, c_min):
 
     if kgrid.dim == 1:
         # display maximum supported frequency
-        print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]} Hz')
+        print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]}Hz')
 
     elif kgrid.dim == 2:
         # display maximum supported frequency
         if k_max.x == k_max.y:
-            print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]} Hz')
+            print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]}Hz')
         else:
-            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]} Hz ' + 
+            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]}Hz ' + 
                   f'by {scale_SI(kgrid.ky_max * c_min / (2*np.pi))[0]} Hz')
 
     elif kgrid.dim == 3:
         # display maximum supported frequency
         if k_max.x == k_max.z and k_max.x == k_max.y:
-            print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]} Hz')
+            print(f'  maximum supported frequency: {scale_SI(k_max_all * c_min / (2*np.pi))[0]}Hz')
         else:
-            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]} Hz' + 
-                  f'by {scale_SI(k_max.y * c_min / (2*np.pi))[0]} Hz ' +
-                  f'by {scale_SI(k_max.z * c_min / (2*np.pi))[0]} Hz')
+            print(f'  maximum supported frequency: {scale_SI(k_max.x * c_min / (2*np.pi))[0]}Hz' + 
+                  f'by {scale_SI(k_max.y * c_min / (2*np.pi))[0]}Hz ' +
+                  f'by {scale_SI(k_max.z * c_min / (2*np.pi))[0]}Hz')
