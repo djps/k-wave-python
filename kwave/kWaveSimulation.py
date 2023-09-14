@@ -1402,7 +1402,7 @@ class kWaveSimulation(object):
                     'reorder_data': self.reorder_data,
                 }),
                 dotdict({
-                    'sensor_x': self.sensor.x,
+                    'sensor_x': self.sensor_x,
                     'sensor_mask_index': self.sensor.mask_index,
                     'record': self.record,
                     'sensor_data_buffer_size': self.sensor.data_buffer_size,
