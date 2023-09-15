@@ -1394,6 +1394,12 @@ class kWaveSimulation(object):
             result = create_storage_variables(
                 self.kgrid, self.sensor, self.options,
                 dotdict({
+                    'sensor_x': self.sensor_x,
+                    'sensor_mask_index': self.sensor_mask_index,
+                    'record': self.record,
+                    'sensor_data_buffer_size': self_sensor.data_buffer_size,
+                }),
+                dotdict({
                     'binary_sensor_mask': self.binary_sensor_mask,
                     'time_rev': self.time_rev,
                     'blank_sensor': self.blank_sensor,
@@ -1401,12 +1407,6 @@ class kWaveSimulation(object):
                     'axisymmetric': self.options.simulation_type.is_axisymmetric(),
                     'reorder_data': self.reorder_data,
                 }),
-                dotdict({
-                    'sensor_x': self.sensor.x,
-                    'sensor_mask_index': self.sensor.mask_index,
-                    'record': self.record,
-                    'sensor_data_buffer_size': self.sensor.data_buffer_size,
-                })
             )
             self.binary_sensor_mask                 = result.binary_sensor_mask
             self.reorder_data                       = result.reorder_data
