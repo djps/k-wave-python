@@ -273,22 +273,22 @@ class kSource(object):
 
             # set source flgs to the length of the sources, this allows the
             # inputs to be defined independently and be of any length
-            if self.sxx is not None and self_sxx > k_Nt:
+            if self.sxx is not None and self.sxx > k_Nt:
                 logging.log(logging.WARN, '  source.sxx has more time points than kgrid.Nt,'
                      ' remaining time points will not be used.')
-            if self.syy is not None and self_syy > k_Nt:
+            if self.syy is not None and self.syy > k_Nt:
                 logging.log(logging.WARN, '  source.syy has more time points than kgrid.Nt,'
                      ' remaining time points will not be used.')
-            if self.szz is not None and self_szz > k_Nt:
+            if self.szz is not None and self.szz > k_Nt:
                 logging.log(logging.WARN, '  source.szz has more time points than kgrid.Nt,'
                      ' remaining time points will not be used.')
-            if self.sxy is not None and self_sxy > k_Nt:
+            if self.sxy is not None and self.sxy > k_Nt:
                 logging.log(logging.WARN, '  source.sxy has more time points than kgrid.Nt,'
                      ' remaining time points will not be used.')
-            if self.sxz is not None and self_sxz > k_Nt:
+            if self.sxz is not None and self.sxz > k_Nt:
                 logging.log(logging.WARN, '  source.sxz has more time points than kgrid.Nt,'
                      ' remaining time points will not be used.')
-            if self.syz is not None and self_syz > k_Nt:
+            if self.syz is not None and self.syz > k_Nt:
                 logging.log(logging.WARN, '  source.syz has more time points than kgrid.Nt,'
                      ' remaining time points will not be used.')
 
