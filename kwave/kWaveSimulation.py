@@ -1397,7 +1397,7 @@ class kWaveSimulation(object):
                     'sensor_x': self.sensor_x,
                     'sensor_mask_index': self.sensor_mask_index,
                     'record': self.record,
-                    'sensor_data_buffer_size': self_sensor_data_buffer_size,
+                    'sensor_data_buffer_size': self.sensor_data_buffer_size,
                 }),
                 dotdict({
                     'binary_sensor_mask': self.binary_sensor_mask,
