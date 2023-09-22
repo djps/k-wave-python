@@ -459,7 +459,8 @@ def tol_star(tolerance, kgrid, point, debug, iterate=None):
         #js_max = np.max( js_.flatten() )
         #ks_min = np.min( ks_.flatten() )
         #ks_max = np.max( ks_.flatten() )
-        #if ((is_min < 0) or (is_max > kgrid.Nx - 1) or (js_min < 0) or (js_max > kgrid.Ny - 1) or (ks_min < 0) or (ks_max > kgrid.Nz - 1) ):
+        #if ((is_min < 0) or (is_max > kgrid.Nx - 1) or (js_min < 0) or (js_max > kgrid.Ny - 1) or 
+        #    (ks_min < 0) or (ks_max > kgrid.Nz - 1) ):
             # inbounds = (1 <= is_) & (is_ <= kgrid.Nx) & (1 <= js_) & (js_ <= kgrid.Ny) & (1 <= ks_) & (ks_ <= kgrid.Nz)
         inbounds = (0 <= is_) & (is_ < kgrid.Nx) & (0 <= js_) & (js_ < kgrid.Ny) & (0 <= ks_) & (ks_ < kgrid.Nz)
             # is_ = is_[inbounds]
