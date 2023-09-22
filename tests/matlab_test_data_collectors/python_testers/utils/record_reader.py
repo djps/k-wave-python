@@ -10,6 +10,7 @@ class TestRecordReader(object):
         self._records = recorded_data
         self._total_steps = recorded_data['total_steps']
         self._step = 0
+        __test__ = False
 
     def expected_value_of(self, name, squeeze=False):
         record_key = f'step_{self._step}___{name}'
