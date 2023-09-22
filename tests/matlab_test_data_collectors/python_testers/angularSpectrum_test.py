@@ -4,12 +4,12 @@ from pathlib import Path
 import numpy as np
 
 from kwave.utils.angular_spectrum import angular_spectrum
-from tests.matlab_test_data_collectors.python_testers.utils.record_reader import TestRecordReader
+from tests.matlab_test_data_collectors.python_testers.utils.record_reader import RecordReader
 
 
 def test_angular_spectrum():
     test_record_path = os.path.join(Path(__file__).parent, 'collectedValues/angularSpectrum.mat')
-    reader = TestRecordReader(test_record_path)
+    reader = RecordReader(test_record_path)
 
     input_plane = reader.expected_value_of('input_plane')
     dx = reader.expected_value_of('dx')

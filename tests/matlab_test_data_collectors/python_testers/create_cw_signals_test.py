@@ -5,13 +5,13 @@ from pathlib import Path
 import numpy as np
 
 from kwave.utils.signals import create_cw_signals
-from tests.matlab_test_data_collectors.python_testers.utils.record_reader import TestRecordReader
+from tests.matlab_test_data_collectors.python_testers.utils.record_reader import RecordReader
 
 
 def test_create_cw_signals():
     test_record_path = os.path.join(Path(__file__).parent, Path(
         'collectedValues/createCWSignals.mat'))
-    reader = TestRecordReader(test_record_path)
+    reader = RecordReader(test_record_path)
     amp = reader.expected_value_of('amp')
     phase = reader.expected_value_of('phase')
     f = reader.expected_value_of('f')

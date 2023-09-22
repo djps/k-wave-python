@@ -4,13 +4,13 @@ from pathlib import Path
 import numpy as np
 
 from kwave.utils.filters import gaussian
-from tests.matlab_test_data_collectors.python_testers.utils.record_reader import TestRecordReader
+from tests.matlab_test_data_collectors.python_testers.utils.record_reader import RecordReader
 
 
 def test_gaussian():
     test_record_path = os.path.join(Path(__file__).parent, Path(
         'collectedValues/gaussian.mat'))
-    reader = TestRecordReader(test_record_path)
+    reader = RecordReader(test_record_path)
     x = reader.expected_value_of('x')
 
     y = gaussian(x)

@@ -4,13 +4,13 @@ from pathlib import Path
 import numpy as np
 
 from kwave.utils.mapgen import hounsfield2density
-from tests.matlab_test_data_collectors.python_testers.utils.record_reader import TestRecordReader
+from tests.matlab_test_data_collectors.python_testers.utils.record_reader import RecordReader
 
 
 def test_hounsfield2density():
     test_record_path = os.path.join(Path(__file__).parent, Path(
         'collectedValues/hounsfield2density.mat'))
-    reader = TestRecordReader(test_record_path)
+    reader = RecordReader(test_record_path)
     p = reader.expected_value_of('p')
 
     out = hounsfield2density(p)

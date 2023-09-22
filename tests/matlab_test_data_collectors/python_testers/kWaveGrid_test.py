@@ -8,12 +8,12 @@ from kwave.data import Vector
 from kwave.enums import DiscreteCosine, DiscreteSine
 from kwave.kgrid import kWaveGrid
 from tests.matlab_test_data_collectors.python_testers.utils.check_equality import check_kgrid_equality
-from tests.matlab_test_data_collectors.python_testers.utils.record_reader import TestRecordReader
+from tests.matlab_test_data_collectors.python_testers.utils.record_reader import RecordReader
 
 
 def test_kwave_grid():
     test_record_path = os.path.join(Path(__file__).parent, 'collectedValues/kWaveGrid.mat')
-    reader = TestRecordReader(test_record_path)
+    reader = RecordReader(test_record_path)
 
     grid_size = Vector([10, 14, 9])
     grid_spacing = Vector([0.1, 0.05, 0.13])

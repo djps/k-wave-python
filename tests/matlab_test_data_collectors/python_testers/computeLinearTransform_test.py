@@ -5,12 +5,12 @@ from pathlib import Path
 import numpy as np
 
 from kwave.utils.math import compute_linear_transform
-from tests.matlab_test_data_collectors.python_testers.utils.record_reader import TestRecordReader
+from tests.matlab_test_data_collectors.python_testers.utils.record_reader import RecordReader
 
 
 def test_compute_linear_transform():
     test_record_path = os.path.join(Path(__file__).parent, 'collectedValues/computeLinearTransform.mat')
-    reader = TestRecordReader(test_record_path)
+    reader = RecordReader(test_record_path)
 
     for i in range(len(reader)):
         params = reader.expected_value_of('params')
