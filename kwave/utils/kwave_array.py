@@ -9,7 +9,6 @@ from numpy.linalg import linalg
 
 import kwave
 from kwave.kgrid import kWaveGrid
-from kwave.utils.data import scale_time
 from kwave.utils.conversion import tol_star
 from kwave.utils.interp import get_delta_bli
 from kwave.utils.mapgen import trim_cart_points, make_cart_rect, make_cart_arc, make_cart_bowl, make_cart_disc, \
@@ -525,6 +524,9 @@ class kWaveArray(object):
 
         # compute scaling factor
         scale = m_grid / m_integration
+        # print("integration points:", np.shape(integration_points))
+        # print("m_grid info:", self.elements[element_num].measure, kgrid.dx, self.elements[element_num].dim)
+        # print("scale:", scale, m_grid, m_integration)
 
         if self.axisymmetric:
             # create new expanded grid
@@ -540,7 +542,7 @@ class kWaveArray(object):
                                            mask_only=mask_only,
                                            single_precision=self.single_precision)
 
-            # keep points in the positive y domain - should this be just kgrid.Ny
+            # keep points in the positive y domain
             grid_weights = grid_weights[:, kgrid.Ny + 1:]
 
         else:
@@ -608,12 +610,11 @@ class kWaveArray(object):
             # distributed_source_signal[local_ind] += (
             #     matlab_mask(source_weights, element_mask_ind - 1) * source_signal[ind, :][None, :])
             distributed_source_signal[local_ind, :] = distributed_source_signal[local_ind, :] + \
-                                                      matlab_mask(source_weights, element_mask_ind - 1) * source_signal[ind, :]
+                               matlab_mask(source_weights, element_mask_ind - 1) * source_signal[ind, :]
 
 
         end_time = time.time()
-        duration = int(end_time - start_time)
-        print(f'total computation time: {scale_time(duration)}')
+        print(f'total computation time : {end_time - start_time:.2f} s')
 
         return distributed_source_signal
 
@@ -679,7 +680,7 @@ def off_grid_points(kgrid, points,
                     bli_tolerance=0.1,
                     bli_type='sinc',
                     mask_only=False,
-                    single_precision=False,
+                    single_precision=True,
                     debug=False,
                     display_wait_bar=False):
 
@@ -769,7 +770,7 @@ def off_grid_points(kgrid, points,
 
         if (bli_tolerance == 0):
             if mask_only:
-                mask = np.ones(mask.shape, dtype=bool)
+                mask = np.ones(mask.shape, dtype=bool) # default is C-ordered
                 return mask
             else:
                 if kgrid.dim == 1:
@@ -804,7 +805,9 @@ def off_grid_points(kgrid, points,
         else:
             icounter = 0
             iterate = 0
-            # create an array of neighbouring grid points for BLI evaluation
+            # create an array of neighbouring grid points for BLI evaluation. 
+            # ind an index which is fortran/matlab ordered and starts from zero. 
+            # this is compatible with matlab_assign and matlab_mask
             if kgrid.dim == 1:
                 ind, is_, _, _, _ = tol_star(bli_tolerance, kgrid, point, debug, iterate=iterate)
                 xs = x_vec[is_]
@@ -828,7 +831,7 @@ def off_grid_points(kgrid, points,
                 xyz = np.array([xs, ys, zs]).T
 
             if mask_only:
-                # add current points to the mask. this is 0-indexed function.
+                # add current points to the mask. this is 0-indexed function. the index is linear fortran ordered.
                 mask = matlab_assign(mask, ind, True)
             else:
                 # evaluate a BLI centered on point at the grid nodes in XYZ
@@ -846,8 +849,6 @@ def off_grid_points(kgrid, points,
                 # for all points, take the product
                 if (np.size(xyz) > kgrid.dim):
                     mask_t = np.squeeze(mask_t)
-                else:
-                    mask_t = np.squeeze(mask_t, axis=0)
 
                 mask_t = np.prod(mask_t, axis=1)
 
