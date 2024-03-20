@@ -95,7 +95,7 @@ def spect(
     sz = func.shape
 
     # precision
-    data_precision = type(np.real(func[0,0]))
+    dataType = type(func[0, 0])
 
     # check input isn't scalar
     if np.size(func) == 1:
@@ -130,7 +130,7 @@ def spect(
     # window the signal, reshaping the window to be in the correct direction
     win, coherent_gain = get_win(func_length, window, symmetric=False)
     win = np.reshape(win, tuple(([1] * dim + [func_length] + [1] * (len(sz) - 2))))
-    func = win.astype(data_precision) * func
+    func = win.astype(dataType) * func
 
     # compute the fft using the defined FFT length, if fft_len >
     # func_length, the input signal is padded with zeros
@@ -139,7 +139,6 @@ def spect(
     # correct for the magnitude scaling of the FFT and the coherent gain of the
     # window(note that the correction is equal to func_length NOT fft_len)
     func_fft = func_fft / (func_length * coherent_gain)
-    func_fft = func_fft.astype(data_precision)
 
     # reduce to a single sided spectrum where the number of unique points for
     # even numbered FFT lengths is given by N / 2 + 1, and for odd(N + 1) / 2
@@ -159,7 +158,7 @@ def spect(
     f = np.arange(0, func_fft.shape[dim]) * Fs / fft_len
 
     # calculate the amplitude spectrum
-    func_as = np.abs(func_fft)
+    func_as = np.abs(func_fft).astype(dataType)
 
     # calculate the phase spectrum
     func_ps = np.angle(func_fft)
@@ -194,7 +193,7 @@ def extract_amp_phase(
 
     """
 
-    dataType = type(data[0,0])
+    dataType = type(data[0, 0])
 
     # check for the dim input
     if dim == "auto":
@@ -213,10 +212,11 @@ def extract_amp_phase(
     data = win.astype(dataType) * data
 
     # compute amplitude and phase spectra
-    f, func_as, func_ps = spect(data, Fs.astype(dataType), fft_len=fft_padding * data.shape[dim], dim=dim)
+    f, func_as, func_ps = spect(data, Fs, fft_len=fft_padding * data.shape[dim], dim=dim)
 
     # correct for coherent gain
-    func_as = func_as / coherent_gain.astype(dataType)
+    func_as = func_as / coherent_gain
+    func_as = func_as.astype(dataType)
 
     # find the index of the frequency component closest to source_freq
     _, f_index = find_closest(f, source_freq)
