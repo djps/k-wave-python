@@ -96,9 +96,9 @@ def test_extract_amp_phase():
     assert (abs(b_t - b) < 0.0001).all()
     assert (abs(c_t - c) < 100).all()
     a_t, b_t, c_t = extract_amp_phase(data=test_signal.astype(np.float32), Fs=18_000_000, source_freq=6_000_000)
-    assert (type(a_t) == np.float32), "type not carried through for np.float32"
+    assert (type(a_t[0]) == np.float32), "type not carried through for np.float32"
     a_t, b_t, c_t = extract_amp_phase(data=test_signal.astype(np.float64), Fs=18_000_000, source_freq=6_000_000)
-    assert (type(a_t) == np.float64), "type not carried through for np.float64"
+    assert (type(a_t[0]) == np.float64), "type not carried through for np.float64"
 
 
 def test_apply_filter_lowpass():
