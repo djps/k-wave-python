@@ -138,7 +138,8 @@ def spect(
 
     # correct for the magnitude scaling of the FFT and the coherent gain of the
     # window(note that the correction is equal to func_length NOT fft_len)
-    func_fft = func_fft / (func_length * coherent_gain.astype(data_precision))
+    func_fft = func_fft / (func_length * coherent_gain)
+    func_fft = func_fft.astype(data_precision)
 
     # reduce to a single sided spectrum where the number of unique points for
     # even numbered FFT lengths is given by N / 2 + 1, and for odd(N + 1) / 2
