@@ -95,7 +95,7 @@ def spect(
     sz = func.shape
 
     # precision
-    data_precision = type(np.real(data[0,0]))
+    data_precision = type(np.real(func[0,0]))
 
     # check input isn't scalar
     if np.size(func) == 1:
