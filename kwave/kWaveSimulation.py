@@ -1112,7 +1112,7 @@ class kWaveSimulation(object):
         if self.record.u_split_field and not self.binary_sensor_mask:
             raise ValueError("The option sensor.record = {" "u_split_field" "} is only compatible " "with a binary sensor mask.")
 
-        # check input options for data streaming *****
+        # check input options for data streaming
         if opt.stream_to_disk:
             if not self.use_sensor or self.time_rev:
                 raise ValueError(
