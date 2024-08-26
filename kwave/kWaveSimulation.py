@@ -1121,9 +1121,9 @@ class kWaveSimulation(object):
                     " is currently only compatible "
                     "with forward simulations using a non-zero sensor mask."
                 )
-            elif self.sensor.record is not None and self.sensor.record.ismember(self.record.flags[1:]).any():
+            elif self.sensor.record is not None and np.all([item not in ['p', "p"] for item in self.sensor.record]):
                 raise ValueError(
-                    "The optional input " "StreamToDisk" " is currently only compatible " "with sensor.record = {" "p" "} (the default)."
+                    "The optional input " "stream_to_disk" " is currently only compatible " "with sensor.record = [" "p" "] (the default)."
                 )
 
         is_axisymmetric = self.options.simulation_type.is_axisymmetric()
