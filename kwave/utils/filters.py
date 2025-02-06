@@ -15,6 +15,15 @@ from ..kgrid import kWaveGrid
 from ..kmedium import kWaveMedium
 
 
+
+def cast_to_type(value, target_type):
+    """Function to cast scalar or array"""
+    if isinstance(value, np.ndarray):
+        return value.astype(target_type)
+    else:
+        return target_type.type(value)
+
+
 def single_sided_correction(func_fft: np.ndarray, fft_len: int, dim: int) -> np.ndarray:
     """Correct the single-sided magnitude by multiplying the symmetric points by 2.
 
@@ -118,7 +127,9 @@ def spect(
 
     data_type = type(func)
 
-    Fs = data_type.type(Fs)
+    print(data_type, Fs, type(Fs))
+
+    Fs = cast_to_type(Fs, data_type)
     
     # window the signal, reshaping the window to be in the correct direction
     win, coherent_gain = get_win(func_length, type_=window, symmetric=False)
@@ -126,7 +137,7 @@ def spect(
     win_shape[dim] = func_length
     win = np.reshape(win, tuple(win_shape))
 
-    coherent_gain = data_type.type(coherent_gain)
+    coherent_gain = cast_to_type(coherent_gain, data_type)
     win = win.astype(data_type)
     
     func = win * func
@@ -141,8 +152,6 @@ def spect(
     epsilon = data_type.type(epsilon)
     
     func_fft = func_fft / (func_length * coherent_gain + epsilon)
-
-    print(np.shape(func_fft), type(func_fft[0,0]))
 
     # reduce to a single sided spectrum where the number of unique points for
     # even numbered FFT lengths is given by N / 2 + 1, and for odd(N + 1) / 2
@@ -198,7 +207,7 @@ def extract_amp_phase(
         if dim == 2 and data.shape[1] == 1:
             dim = 1
 
-    data_type = type(func)
+    data_type = type(data)
     
     # create 1D window and reshape to be oriented in the time dimension of the
     # input data
@@ -207,8 +216,8 @@ def extract_amp_phase(
     # TODO: simplify this
     win = np.reshape(win, [1] * (dim - 1) + [len(win)])
 
-    coherent_gain = data_type.type(coherent_gain)
-    Fs = data_type.type(Fs)
+    coherent_gain = cast_to_type(coherent_gain, data_type)
+    Fs = cast_to_type(Fs, data_type)
     win = win.astype(data_type)
     
     # apply window to time dimension of input data
