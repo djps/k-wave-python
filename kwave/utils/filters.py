@@ -125,7 +125,7 @@ def spect(
             # set the FFT length to the function length
             fft_len = func_length
 
-    data_type = type(func)
+    data_type = func.dtype
 
     print(data_type, Fs, type(Fs))
 
@@ -207,7 +207,7 @@ def extract_amp_phase(
         if dim == 2 and data.shape[1] == 1:
             dim = 1
 
-    data_type = type(data)
+    data_type = data.dtype
     
     # create 1D window and reshape to be oriented in the time dimension of the
     # input data
