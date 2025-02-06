@@ -29,6 +29,7 @@ def single_sided_correction(func_fft: np.ndarray, fft_len: int, dim: int) -> np.
     Returns:
         The corrected FFT of the function.
     """
+    
     if fft_len % 2:
         # odd FFT length switch dim case
         if dim == 0:
@@ -115,21 +116,33 @@ def spect(
             # set the FFT length to the function length
             fft_len = func_length
 
+    data_type = type(func)
+
+    Fs = data_type.type(Fs)
+    
     # window the signal, reshaping the window to be in the correct direction
     win, coherent_gain = get_win(func_length, type_=window, symmetric=False)
     win_shape = [1] * len(sz)
     win_shape[dim] = func_length
     win = np.reshape(win, tuple(win_shape))
-    func = win * func
 
+    coherent_gain = data_type.type(coherent_gain)
+    win = win.astype(data_type)
+    
+    func = win * func
+    
     # compute the fft using the defined FFT length, if fft_len >
     # func_length, the input signal is padded with zeros
-    func_fft = np.fft.fft(func, n=fft_len, axis=dim)
+    func_fft = scipy.fft.fft(func, n=fft_len, axis=dim)
 
     # correct for the magnitude scaling of the FFT and the coherent gain of the
     # window(note that the correction is equal to func_length NOT fft_len)
     epsilon = 1e-10  # Small value to prevent division by zero
+    epsilon = data_type.type(epsilon)
+    
     func_fft = func_fft / (func_length * coherent_gain + epsilon)
+
+    print(np.shape(func_fft), type(func_fft[0,0]))
 
     # reduce to a single sided spectrum where the number of unique points for
     # even numbered FFT lengths is given by N / 2 + 1, and for odd(N + 1) / 2
@@ -185,6 +198,8 @@ def extract_amp_phase(
         if dim == 2 and data.shape[1] == 1:
             dim = 1
 
+    data_type = type(func)
+    
     # create 1D window and reshape to be oriented in the time dimension of the
     # input data
     win, coherent_gain = get_win(data.shape[dim], window)
@@ -192,6 +207,10 @@ def extract_amp_phase(
     # TODO: simplify this
     win = np.reshape(win, [1] * (dim - 1) + [len(win)])
 
+    coherent_gain = data_type.type(coherent_gain)
+    Fs = data_type.type(Fs)
+    win = win.astype(data_type)
+    
     # apply window to time dimension of input data
     data = win * data
 
