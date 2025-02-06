@@ -127,7 +127,7 @@ def spect(
 
     data_type = func.dtype
 
-    print(data_type, Fs, type(Fs))
+    print(0)
 
     Fs = cast_to_type(Fs, data_type)
     
@@ -141,10 +141,14 @@ def spect(
     win = win.astype(data_type)
     
     func = win * func
+
+    print(1)
     
     # compute the fft using the defined FFT length, if fft_len >
     # func_length, the input signal is padded with zeros
     func_fft = scipy.fft.fft(func, n=fft_len, axis=dim)
+
+    print(2)
 
     # correct for the magnitude scaling of the FFT and the coherent gain of the
     # window(note that the correction is equal to func_length NOT fft_len)
@@ -161,6 +165,8 @@ def spect(
     func_fft = func_fft[tuple(slicing)]
 
     func_fft = single_sided_correction(func_fft, fft_len, dim)
+
+    print(3)
 
     # create the frequency axis variable
     f = np.arange(0, num_unique_pts) * Fs / fft_len
@@ -226,6 +232,8 @@ def extract_amp_phase(
     # compute amplitude and phase spectra
     f, func_as, func_ps = spect(data, Fs, fft_len=fft_padding * data.shape[dim], dim=dim)
 
+    print("done spect")
+
     # correct for coherent gain
     func_as = func_as / coherent_gain
 
@@ -249,6 +257,7 @@ def extract_amp_phase(
     elif dim == 3:
         amp = func_as[:, :, :, f_index]
         phase = func_ps[:, :, :, f_index]
+        del func_as, func_ps
     else:
         raise ValueError("dim must be 0, 1, 2, or 3")
 
