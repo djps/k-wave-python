@@ -12,7 +12,7 @@ from kwave.recorder import Recorder
 from kwave.utils.dotdictionary import dotdict
 
 
-def gridDataFast2D(x, y, xi, yi):
+def grid_data_fast_2d(x, y, xi, yi):
     """
     Delauney triangulation in 2D
     """
@@ -21,31 +21,65 @@ def gridDataFast2D(x, y, xi, yi):
     xi = np.ravel(xi)
     yi = np.ravel(yi)
 
-    points = np.squeeze(np.dstack((x, y)))
+    grid_points = np.squeeze(np.dstack((x, y)))
     interpolation_points = np.squeeze(np.dstack((xi, yi)))
 
-    tri = Delaunay(points)
+    tri = Delaunay(grid_points)
 
-    indices = tri.find_simplex(interpolation_points)
+    simplex_indices = tri.find_simplex(interpolation_points)
 
-    bc = tri.transform[indices, :2].dot(np.transpose(tri.points[indices, :] - tri.transform[indices, 2]))
+    bc = tri.transform[simplex_indices, :2].dot(np.transpose(tri.points[simplex_indices, :] - tri.transform[simplex_indices, 2]))
 
-    return tri.points[indices, :], bc
+    return tri.points[simplex_indices, :], bc
 
 
-def gridDataFast3D(x, y, z, xi, yi, zi):
+def grid_data_fast_3d(x, y, z, xi, yi, zi):
     """
     Delauney triangulation in 3D
     """
     x = np.ravel(x)
     y = np.ravel(y)
-    z = np.ravel(z)
+    
     xi = np.ravel(xi)
     yi = np.ravel(yi)
-    zi = np.ravel(zi)
 
-    grid_points = np.squeeze(np.dstack((x, y, z)))
-    interpolation_points = np.squeeze(np.dstack((xi, yi, zi)))
+    if z is not None and zi is not None:
+        z = np.ravel(z)
+        zi = np.ravel(zi)
+        grid_points = np.squeeze(np.dstack((x, y, z)))
+        interpolation_points = np.squeeze(np.dstack((xi, yi, zi)))
+    else:
+        grid_points = np.squeeze(np.dstack((x, y)))
+        interpolation_points = np.squeeze(np.dstack((xi, yi)))
+
+    tri = Delaunay(grid_points)
+
+    simplex_indices = tri.find_simplex(interpolation_points)
+
+    # barycentric coordinates
+    bc = tri.transform[simplex_indices, :2].dot(np.transpose(tri.points[simplex_indices, :] - tri.transform[simplex_indices, 2]))
+
+    return tri.points[simplex_indices, :], bc
+
+
+def grid_data_fast(x, y, xi, yi, z=None, zi=None):
+    """
+    Delauney triangulation 
+    """
+    x = np.ravel(x)
+    y = np.ravel(y)
+    
+    xi = np.ravel(xi)
+    yi = np.ravel(yi)
+
+    if z is not None and zi is not None:
+        z = np.ravel(z)
+        zi = np.ravel(zi)
+        grid_points = np.squeeze(np.dstack((x, y, z)))
+        interpolation_points = np.squeeze(np.dstack((xi, yi, zi)))
+    else:
+        grid_points = np.squeeze(np.dstack((x, y)))
+        interpolation_points = np.squeeze(np.dstack((xi, yi)))
 
     tri = Delaunay(grid_points)
 
@@ -76,7 +110,8 @@ def create_storage_variables(kgrid: kWaveGrid, sensor, opt: SimulationOptions,
     # PREPARE DATA MASKS AND STORAGE VARIABLES
     # =========================================================================
 
-    sensor_data = OutputSensor()
+
+    sensor_data_temp = OutputSensor()
 
     flags = set_flags(flags, values.sensor_x, sensor.mask, opt.cartesian_interp)
 
@@ -541,14 +576,10 @@ def compute_triangulation_points(flags, kgrid, record, mask):
 
             # assign pseudonym for Cartesain grid points in 1D (this is later used for data casting)
             record.grid_x = kgrid.x_vec
+            # sensor_x = np.reshape((mask, (-1, 1)))
 
-        else:
-
-            if kgrid.dim == 1:
-              # align sensor data as a column vector to be the same as kgrid.x_vec
-              # so that calls to interp return data in the correct dimension
-              sensor_x = np.reshape((mask, (-1, 1)))
-            elif kgrid.dim == 2:
+        else:               
+            if kgrid.dim == 2:
                 sensor_x = mask[0, :]
                 sensor_y = mask[1, :]
             elif kgrid.dim == 3:
@@ -562,11 +593,11 @@ def compute_triangulation_points(flags, kgrid, record, mask):
             # compute triangulation
             if kgrid.dim == 2:
                 if flags.axisymmetric:
-                    record.tri, record.bc = gridDataFast2D(kgrid.x, kgrid.y - kgrid.y_vec.min(), sensor_x, sensor_y)
+                    record.tri, record.bc = grid_data_fast_2d(kgrid.x, kgrid.y - kgrid.y_vec.min(), sensor_x, sensor_y)
                 else:
-                    record.tri, record.bc = gridDataFast2D(kgrid.x, kgrid.y, sensor_x, sensor_y)
+                    record.tri, record.bc = grid_data_fast_2d(kgrid.x, kgrid.y, sensor_x, sensor_y)
             elif kgrid.dim == 3:
-                record.tri, record.bc = gridDataFast3D(kgrid.x, kgrid.y, kgrid.z, sensor_x, sensor_y, sensor_z)
+                record.tri, record.bc = grid_data_fast_3d(kgrid.x, kgrid.y, kgrid.z, sensor_x, sensor_y, sensor_z)
 
             print("done")
 
@@ -583,11 +614,11 @@ def calculate_all_vars_size(kgrid, is_pml_inside, pml_size):
         all_vars_size = kgrid.k.shape
     else:
         if kgrid.dim == 1:
-            all_vars_size = [kgrid.Nx - 2 * pml_size.x, 1]
+            all_vars_size = [kgrid.Nx - 2 * pml_size.x, ]
         elif kgrid.dim == 2:
             all_vars_size = [kgrid.Nx - 2 * pml_size.x, kgrid.Ny - 2 * pml_size.y]
         elif kgrid.dim == 3:
             all_vars_size = [kgrid.Nx - 2 * pml_size.x, kgrid.Ny - 2 * pml_size.y, kgrid.Nz - 2 * pml_size.z]
         else:
-            raise NotImplementedError
+            raise ValueError('Invalid grid dimension: {}'.format(kgrid.dim))
     return all_vars_size

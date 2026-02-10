@@ -35,9 +35,9 @@ grid_spacing_meters = Vector([dx, ])
 kgrid = kWaveGrid(grid_size_points, grid_spacing_meters)
 
 # define the properties of the propagation medium
-sound_speed = 1500.0 * np.ones((Nx, 1))                    # [m/s]
+sound_speed = 1500.0 * np.ones((Nx, ))                    # [m/s]
 sound_speed[:np.round(Nx / 3).astype(int) - 1] = 2000.0	   # [m/s]
-density = 1000.0 * np.ones((Nx, 1))                        # [kg/m^3]
+density = 1000.0 * np.ones((Nx, ))                        # [kg/m^3]
 density[np.round(4 * Nx / 5).astype(int) - 1:] = 1500.0    # [kg/m^3]
 medium = kWaveMedium(sound_speed=sound_speed, density=density)
 
@@ -45,13 +45,13 @@ medium = kWaveMedium(sound_speed=sound_speed, density=density)
 source = kSource()
 
 # create initial pressure distribution using a smoothly shaped sinusoid
-x_pos: int = 280    # [grid points]
 width: int = 100    # [grid points]
-height: int = 1     # [au]
-p0 = np.linspace(0.0, 2.0 * np.pi, width + 1)
+p0 = np.linspace(0.0, 2.0 * np.pi, width + 1) - np.pi / 2.0
 
+x_pos: int = 280    # [grid points]
+height: int = 1     # [au]
 part1 = np.zeros(x_pos).astype(float)
-part2 = (height / 2.0) * np.sin(p0 - np.pi / 2.0) + (height / 2.0)
+part2 = (height / 2.0) * (1.0 + np.sin(p0))
 part3 = np.zeros(Nx - x_pos - width - 1).astype(float)
 source.p0 = np.concatenate([part1, part2, part3])
 

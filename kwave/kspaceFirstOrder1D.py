@@ -264,14 +264,14 @@ def kspace_first_order_1D(kgrid: kWaveGrid,
 
     # TODO: Move to input checking
     # If the user passed a 1D time‐series, promote it to shape (1, Nt)
-    src = k_sim.source
-    if getattr(k_sim.source, "ux", False) is not False:
+    if getattr(k_sim.source, "ux", False) not in (False, None, 0):
+        print(k_sim.source.ux)
         # only promote if it has fewer than 2 dims
         if k_sim.source.ux.ndim < 2:
             warnings.warn("A spatially and temporally varying velocity source was passed, but is the wrong shape.")
             k_sim.source.ux = np.atleast_2d(k_sim.source.ux)
 
-    if getattr(k_sim.source, "p", False) is not False:
+    if getattr(k_sim.source, "p", False) not in (False, None, 0):
         if k_sim.source.p.ndim < 2:
             warnings.warn("A spatially and temporally varying pressure source was passed, but is the wrong shape.")
             k_sim.source.p = np.atleast_2d(k_sim.source.p)
@@ -376,12 +376,12 @@ def kspace_first_order_1D(kgrid: kWaveGrid,
     
     # create k-space operator (the option options.use_kspace exists for debugging)
     if options.use_kspace:
-        kappa        = scipy.fft.ifftshift(sinc(c_ref * kgrid.k * dt / 2.0))
+        kappa        = scipy.fft.ifftshift(sinc(c_ref * k_sim.kgrid.k * dt / 2.0))
         kappa        = np.squeeze(kappa)
         source_kappa = 1.0
-        if (hasattr(k_sim, 'source_p') and getattr(k_sim.source, 'p_mode', None) == 'additive') or \
-           (hasattr(k_sim, 'source_ux') and getattr(k_sim.source, 'u_mode', None) == 'additive'):
-            source_kappa = scipy.fft.ifftshift(np.cos (c_ref * kgrid.k * dt / 2.0))
+        if (k_sim.source_p is not False  and getattr(k_sim.source, 'p_mode', None) == 'additive') or \
+           (k_sim.source_ux is not False and getattr(k_sim.source, 'u_mode', None) == 'additive'):
+            source_kappa = scipy.fft.ifftshift(np.cos (c_ref * k_sim.kgrid.k * dt / 2.0))
     else:
         kappa        = 1.0
         source_kappa = 1.0
@@ -496,7 +496,7 @@ def kspace_first_order_1D(kgrid: kWaveGrid,
     sensor_mask_index = xp.asarray(k_sim.sensor_mask_index, dtype=int)
 
     if k_sim.source.p0 is not None:
-        p0 = xp.asarray(k_sim.source.p0)
+        p0 = xp.squeeze(xp.asarray(k_sim.source.p0))
 
     if using_gpu:
         record = to_gpu(record)
@@ -536,13 +536,16 @@ def kspace_first_order_1D(kgrid: kWaveGrid,
                 case 2:
                     # calculate gradient using second-order accurate finite
                     # difference scheme (including half step forward)
-                    dpdx =  (xp.append(p[1:], 0.0) - p) / dx 
+                    dpdx = (xp.concatenate([p[1:], xp.zeros(1, dtype=p.dtype)]) - p) / dx
                     ux_sgx = pml_x_sgx * (pml_x_sgx * ux_sgx - dt * rho0_sgx_inv * dpdx )
                     
                 case 4:
                     # calculate gradient using fourth-order accurate finite
                     # difference scheme (including half step forward)
-                    dpdx = (xp.insert(p[:-1], 0, 0) - 27.0 * p + 27 * xp.append(p[1:], 0.0) - xp.append(p[2:], [0, 0])) / (24.0 * dx)
+                    dpdx = (xp.concatenate([xp.zeros(1, dtype=p.dtype), p[:-1]]) - 
+                            27.0 * p + 
+                            27.0 * xp.concatenate([p[1:], xp.zeros(1, dtype=p.dtype)]) - 
+                            xp.concatenate([p[2:], xp.zeros(2, dtype=p.dtype)])) / (24.0 * dx)        
                     ux_sgx = pml_x_sgx * (pml_x_sgx * ux_sgx - dt * rho0_sgx_inv * dpdx )
                     
         else:           
@@ -580,12 +583,20 @@ def kspace_first_order_1D(kgrid: kWaveGrid,
             match options.use_finite_difference:
                 case 2:
                     # calculate gradient using second-order accurate finite difference scheme (including half step backward)
-                    duxdx = (ux_sgx - xp.append(ux_sgx[:-1], 0)) / dx 
+                    #uxdx = (ux_sgx - xp.append(ux_sgx[:-1], 0)) / dx 
+                    duxdx = (ux_sgx - xp.concatenate([ux_sgx[:-1], xp.zeros(1, dtype=p.dtype)])) / dx
                     
                 case 4:
                     # calculate gradient using fourth-order accurate finite difference scheme (including half step backward) 
-                    duxdx = (xp.append([0, 0], ux_sgx[:-2]) - 27.0 * xp.append(0, ux_sgx[:-1]) + 27.0 * ux_sgx  - xp.append(ux_sgx[1:], 0)) / (24.0 * dx)
-                                       
+                    #duxdx = (xp.append([0, 0], ux_sgx[:-2]) - 27.0 * xp.append(0, ux_sgx[:-1]) + 27.0 * ux_sgx  - xp.append(ux_sgx[1:], 0)) / (24.0 * dx)
+                    duxdx = (
+                        xp.concatenate((xp.zeros(2, dtype=ux_sgx.dtype), ux_sgx[:-2])) -
+                        27.0 * xp.concatenate((xp.zeros(1, dtype=ux_sgx.dtype), ux_sgx[:-1])) +
+                        27.0 * ux_sgx -
+                        xp.concatenate((ux_sgx[1:], xp.zeros(1, dtype=ux_sgx.dtype)))
+                    ) / (24.0 * dx)
+
+
         else:      
             # calculate gradients using a non-uniform grid via the mapped
             # pseudospectral method
@@ -632,7 +643,7 @@ def kspace_first_order_1D(kgrid: kWaveGrid,
                     # calculate p using a linear absorbing equation of state
                     p = xp.squeeze(c0**2 * (rhox
                         + medium.absorb_tau * xp.real(xp.fft.ifftn(medium.absorb_nabla1 * xp.fft.fftn(rho0 * duxdx, axes=(0,)), axes=(0,) ))  
-                        - medium.absorb_eta * xp.real(xp.fft.ifftn(medium.absorb_nabla2 * xp.fft.fftn(rhox, axes=(0,)), axes=(0,))) ) )
+                        - medium.absorb_eta * xp.real(xp.fft.ifftn(medium.absorb_nabla2 * xp.fft.fftn(rhox, axes=(0,)), axes=(0,)) )) )
     
                 case 'stokes':
                     # calculate p using a linear absorbing equation of state
@@ -662,8 +673,6 @@ def kspace_first_order_1D(kgrid: kWaveGrid,
         # enforce initial conditions if k_sim.source.p0 is defined instead of time varying sources
         if t_index == 0 and k_sim.source.p0 is not None:
 
-            p0 = xp.squeeze(p0)
-
             # add the initial pressure to rho as a mass source
             p = p0
             rhox = p0 / xp.squeeze(c0)**2
@@ -680,12 +689,15 @@ def kspace_first_order_1D(kgrid: kWaveGrid,
                 match options.use_finite_difference:
                     case 2:
                         # calculate gradient using second-order accurate finite difference scheme (including half step forward)            
-                        dpdx =  (xp.append(p[1:], 0.0) - p) / dx
+                        dpdx = (xp.concatenate([p[1:], xp.zeros(1, dtype=p.dtype)]) - p) / dx
                         ux_sgx = dt * rho0_sgx_inv * dpdx / 2.0
                         
                     case 4:   
                         # calculate gradient using fourth-order accurate finite difference scheme (including half step backward)
-                        dpdx = (xp.append(p[2:], [0, 0]) - 27.0 * xp.append(p[1:], 0) + 27.0 * p - xp.append(0, p[:-1])) / (24.0 * dx)
+                        dpdx = (xp.concatenate([xp.zeros(1, dtype=p.dtype), p[:-1]]) - 
+                                27.0 * p + 
+                                27.0 * xp.concatenate([p[1:], xp.zeros(1, dtype=p.dtype)]) - 
+                                xp.concatenate([p[2:], xp.zeros(2, dtype=p.dtype)])) / (24.0 * dx)   
                         ux_sgx = dt * rho0_sgx_inv * dpdx / 2.0
                         
         else:
@@ -699,17 +711,17 @@ def kspace_first_order_1D(kgrid: kWaveGrid,
         
             # update index for data storage
             file_index: int = t_index - record_start_index
+
+            if (file_index == 0): 
+                warnings.warn("This functionality is not yet implemented", UserWarning)
             
+            sensor_data.p[:, file_index] = xp.interp(xp.squeeze(record.sensor_x), xp.squeeze(record.grid_x), xp.real(p))
+
             # run sub-function to extract the required data from the acoustic variables
-            sensor_data = extract_sensor_data(kdim, xp, sensor_data, file_index, sensor_mask_index, 
-                                              extract_options, record, p, ux_sgx)
+            # sensor_data = extract_sensor_data(kdim, xp, sensor_data, file_index, sensor_mask_index, extract_options, record, p, ux_sgx)
 
 
     if using_gpu:
         sensor_data = dotdict_to_cpu(sensor_data)
 
     return sensor_data
-
-
-
-

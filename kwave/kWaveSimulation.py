@@ -144,6 +144,7 @@ class kWaveSimulation(object):
         self.c0 = None  #: Alias to medium.sound_speed
         self.index_data_type = None
 
+
     @property
     def is_nonlinear(self):
         """
@@ -151,6 +152,7 @@ class kWaveSimulation(object):
             Set simulation to nonlinear if medium is nonlinear.
         """
         return self.medium.is_nonlinear()
+
 
     @property
     def equation_of_state(self):
@@ -166,33 +168,33 @@ class kWaveSimulation(object):
         else:
             return "lossless"
 
+
     @property
     def use_sensor(self):
         """
         Returns:
             False if no output of any kind is required
-
         """
         return self.sensor is not None
+
 
     @property
     def blank_sensor(self):
         """
         Returns
             True if sensor.mask is not defined but _max_all or _final variables are still recorded
-
         """
         fields = ["p", "p_max", "p_min", "p_rms", "u", "u_non_staggered", "u_split_field", "u_max", "u_min", "u_rms", "I", "I_avg"]
         if not (isinstance(self.sensor, NotATransducer) or any(self.record.is_set(fields)) or self.time_rev):
             return True
         return False
 
+
     @property
     def kelvin_voigt_model(self):
         """
         Returns:
             Whether the simulation is elastic with absorption
-
         """
         return False
 
@@ -201,9 +203,9 @@ class kWaveSimulation(object):
         """
         Returns:
             True if the computational grid is non-uniform
-
         """
         return self.kgrid.nonuniform
+
 
     @property
     @deprecated(version="0.4.1", reason="Use TimeReversal class instead")
@@ -212,22 +214,22 @@ class kWaveSimulation(object):
             return not self.options.simulation_type.is_elastic_simulation() and self.sensor.time_reversal_boundary_data is not None
         return self.time_rev
 
+
     @property
     @deprecated(version="0.4.1", reason="Use TimeReversal class instead")
     def elastic_time_rev(self):
         """
         Returns:
             True if using time reversal with the elastic code
-
         """
         return False
+
 
     @property
     def compute_directivity(self):
         """
         Returns:
             True if directivity calculations in 2D are used by setting sensor.directivity_angle
-
         """
         if self.sensor is not None and not isinstance(self.sensor, NotATransducer):
             if self.kgrid.dim == 2:
@@ -236,6 +238,7 @@ class kWaveSimulation(object):
                 if directivity is not None and directivity.angle is not None:
                     return True
         return False
+
 
     @property
     def cuboid_corners(self):
@@ -247,6 +250,7 @@ class kWaveSimulation(object):
             if not self.blank_sensor and self.sensor.mask.shape[0] == 2 * self.kgrid.dim:
                 return True
         return self.userarg_cuboid_corners
+
 
     ##############
     # flags which control the types of source used
@@ -841,9 +845,14 @@ class kWaveSimulation(object):
                     else:
                         # check the Cartesian sensor mask is the correct size
                         # (1 x N, 2 x N, 3 x N)
+
+                        if kgrid_dim == 1:
+                            if self.sensor.mask.ndim == 1:
+                                self.sensor.mask = self.sensor.mask[:, np.newaxis].T
+
                         assert (
                             self.sensor.mask.shape[0] == kgrid_dim and num_dim2(self.sensor.mask) <= 2
-                        ), f"Cartesian sensor.mask for a {kgrid_dim}D simulation must be given as a {kgrid_dim} by N array."
+                        ), f"Cartesian sensor.mask for a {kgrid_dim}D simulation must be given as a {kgrid_dim} by N array. {self.sensor.mask.shape} and {num_dim2(self.sensor.mask) }"
 
                         # set Cartesian mask flag (this is modified in
                         # createStorageVariables if the interpolation setting is
