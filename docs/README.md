@@ -26,7 +26,7 @@ No GPU required — all examples run on CPU with NumPy.
 
 Reference runtimes for the 3D scaling benchmark in [`benchmarks/benchmark.py`](../benchmarks/README.md). Values are total elapsed seconds for a single default run (3D initial-value problem, heterogeneous absorbing medium, 1000 timesteps, averaged over 3 repeats).
 
-| Backend | OS                    | Accelerator       | k-wave-python | BINARY_VERSION | 64³ | 128³ | 256³ | Hardware |
+| Backend | OS                    | Accelerator       | k-wave-python | Binary | 64³ | 128³ | 256³ | Hardware |
 |---------|-----------------------|-------------------|---------------|----------------|-----|------|------|----------|
 | python  | Linux                 | CPU               | 0.6.3rc1     | —              | 127 | —    | —    | GCP n1-highmem-8, 8 vCPU |
 | python  | Linux                 | NVIDIA GPU        | 0.6.3rc1     | —              | 6   | 71   | 382  | NVIDIA T4, 15 GB (GCP n1-highmem-8) |
