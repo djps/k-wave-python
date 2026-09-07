@@ -253,7 +253,7 @@ class kSource(object):
 
                 # check the source labels are monotonic, and start from 1
                 # if (sum(u_unique(2:end) - u_unique(1:end-1)) != (numel(u_unique) - 1)) or (~any(u_unique == 1))
-                if np.sum(u_unique[1:] - u_unique[:-2]) != np.size(u_unique) or not np.any(u_unique == 1):
+                if np.sum(u_unique[1:] - u_unique[:-1]) != np.size(u_unique) or not np.any(u_unique == 1):
                     raise ValueError(
                         "If using a labelled source.u_mask, " "the source labels must be monotonically increasing and start from 1."
                     )

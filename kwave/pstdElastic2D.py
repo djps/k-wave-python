@@ -597,11 +597,11 @@ def pstd_elastic_2d(kgrid: kWaveGrid,
         ddy_k_shift_pos = scipy.fft.ifftshift(1j * ky_vec)
         ddy_k_shift_neg = scipy.fft.ifftshift(1j * ky_vec)
 
-    # shape for broadcasting
-    ddx_k_shift_pos = np.expand_dims(ddx_k_shift_pos, axis=1)
-    ddx_k_shift_neg = np.expand_dims(ddx_k_shift_neg, axis=1)
-    ddy_k_shift_pos = np.expand_dims(np.squeeze(ddy_k_shift_pos), axis=0)
-    ddy_k_shift_neg = np.expand_dims(np.squeeze(ddy_k_shift_neg), axis=0)
+    # shape for broadcasting - Note: shapes different for ddx and ddy 
+    ddx_k_shift_pos = ddx_k_shift_pos[:, np.newaxis] 
+    ddx_k_shift_neg = ddx_k_shift_neg[:, np.newaxis]
+    ddy_k_shift_pos = ddy_k_shift_pos[np.newaxis, :] 
+    ddy_k_shift_neg = ddy_k_shift_neg[np.newaxis, :]
 
     # =========================================================================
     # DATA CASTING
@@ -921,7 +921,7 @@ def pstd_elastic_2d(kgrid: kWaveGrid,
                 syy_split_x[np.unravel_index(k_sim.s_source_pos_index, syy_split_x.shape, order='F')] += k_sim.source.syy[k_sim.s_source_sig_index, t_index]
                 syy_split_y[np.unravel_index(k_sim.s_source_pos_index, syy_split_y.shape, order='F')] += k_sim.source.syy[k_sim.s_source_sig_index, t_index]
 
-        if (k_sim.source_sxy is not False and t_index < k_sim.source_sxy):
+        if (k_sim.source_sxy is not False and t_index < np.shape(source.sxy)[1]):
             if (source.s_mode == 'dirichlet'):
                 # enforce the source values as a dirichlet boundary condition
                 sxy_split_x[np.unravel_index(k_sim.s_source_pos_index, sxy_split_x.shape, order='F')] = k_sim.source.sxy[k_sim.s_source_sig_index, t_index]
