@@ -867,7 +867,7 @@ def pstd_elastic_3d(kgrid: kWaveGrid,
     if hasattr(k_sim, 'u_source_pos_index'):
         if k_sim.u_source_pos_index is not None:
         # if k_sim.u_source_pos_index.ndim != 0:
-          k_sim.u_source_pos_index = np.squeeze(k_sim.u_source_pos_index) - int(1)
+            k_sim.u_source_pos_index = np.squeeze(k_sim.u_source_pos_index) - int(1)
 
     if hasattr(k_sim, 'p_source_pos_index'):
         if k_sim.p_source_pos_index is not None:
@@ -889,10 +889,7 @@ def pstd_elastic_3d(kgrid: kWaveGrid,
 
     # These should be zero indexed. Note the x2, y2 and z2 indices do not need to be shifted
     if hasattr(record, 'x1_inside') and record.x1_inside is not None:
-      if (record.x1_inside == 0):
-          print("GAH")
-      else:
-          record.x1_inside = int(record.x1_inside - 1)
+        record.x1_inside = int(record.x1_inside - 1)
 
     if hasattr(record, 'y1_inside') and record.y1_inside is not None:
         record.y1_inside = int(record.y1_inside - 1)
@@ -1284,7 +1281,7 @@ def pstd_elastic_3d(kgrid: kWaveGrid,
             if (source.s_mode == 'dirichlet'):
                 # enforce the source values as a dirichlet boundary condition
                 syz_split_y[np.unravel_index(k_sim.s_source_pos_index, syz_split_y.shape, order=myOrder)] = k_sim.source.syz[k_sim.s_source_sig_index, t_index]
-                syz_split_z[np.unravel_index(k_sim.s_source_pos_index, syz_split_y.shape, order=myOrder)] = k_sim.source.syz[k_sim.s_source_sig_index, t_index]
+                syz_split_z[np.unravel_index(k_sim.s_source_pos_index, syz_split_z.shape, order=myOrder)] = k_sim.source.syz[k_sim.s_source_sig_index, t_index]
             else:
                 # add the source values to the existing field values
                 syz_split_y[np.unravel_index(k_sim.s_source_pos_index, syz_split_y.shape, order=myOrder)] += k_sim.source.syz[k_sim.s_source_sig_index, t_index]
