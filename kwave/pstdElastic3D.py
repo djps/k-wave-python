@@ -1067,7 +1067,7 @@ def pstd_elastic_3d(kgrid: kWaveGrid,
         uz_split_z = mpml_y * mpml_x * pml_z_sgz * (mpml_y * mpml_x * pml_z_sgz * uz_split_z + dt * rho0_sgz_inv * dszzdz)
 
         # add in the velocity source terms
-        if k_sim.source_ux is not False and k_sim.source_ux >= t_index:
+        if k_sim.source_ux is not False and k_sim.source_ux > t_index:
             if (source.u_mode == 'dirichlet'):
                 # enforce the source values as a dirichlet boundary condition
                 ux_split_x[np.unravel_index(k_sim.u_source_pos_index, ux_split_x.shape, order=myOrder)] = np.squeeze(k_sim.source.ux[k_sim.u_source_sig_index, t_index])
@@ -1075,7 +1075,7 @@ def pstd_elastic_3d(kgrid: kWaveGrid,
                 # add the source values to the existing field values
                 ux_split_x[np.unravel_index(k_sim.u_source_pos_index, ux_split_x.shape, order=myOrder)] += np.squeeze(k_sim.source.ux[k_sim.u_source_sig_index, t_index])
 
-        if k_sim.source_uy is not False and k_sim.source_uy >= t_index:
+        if k_sim.source_uy is not False and k_sim.source_uy > t_index:
             if (source.u_mode == 'dirichlet'):
                 # enforce the source values as a dirichlet boundary condition
                 uy_split_y[np.unravel_index(k_sim.u_source_pos_index, uy_split_y.shape, order=myOrder)] = np.squeeze(k_sim.source.uy[k_sim.u_source_sig_index, t_index])
@@ -1083,7 +1083,7 @@ def pstd_elastic_3d(kgrid: kWaveGrid,
                 # add the source values to the existing field values
                 uy_split_y[np.unravel_index(k_sim.u_source_pos_index, uy_split_y.shape, order=myOrder)] += np.squeeze(k_sim.source.uy[k_sim.u_source_sig_index, t_index])
 
-        if k_sim.source_uz is not False and k_sim.source_uz >= t_index:
+        if k_sim.source_uz is not False and k_sim.source_uz > t_index:
             if (source.u_mode == 'dirichlet'):
                 # enforce the source values as a dirichlet boundary condition
                 uz_split_z[np.unravel_index(k_sim.u_source_pos_index, uz_split_z.shape, order=myOrder)] = np.squeeze(k_sim.source.uz[k_sim.u_source_sig_index, t_index])
